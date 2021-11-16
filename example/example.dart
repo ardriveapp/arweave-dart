@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
 
@@ -13,8 +14,8 @@ void main() async {
 
   // Create a data transaction.
   final transaction = await client.transactions.prepare(
-    Transaction.withBlobData(data: utf8.encode('Hello world!')),
-    owner,
+    Transaction.withBlobData(data: utf8.encode('Hello world!') as Uint8List),
+    wallet,
   );
 
   // Optionally add tags to the transaction.

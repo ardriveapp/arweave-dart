@@ -11,7 +11,7 @@ class ArweaveTransactionsApi {
   Future<String> getTransactionAnchor() =>
       _api.get('tx_anchor').then((res) => res.body);
 
-  Future<BigInt> getPrice({int byteSize, String targetAddress}) {
+  Future<BigInt> getPrice({required int byteSize, String? targetAddress}) {
     final endpoint = targetAddress != null
         ? 'price/$byteSize/$targetAddress'
         : 'price/$byteSize';
@@ -21,7 +21,7 @@ class ArweaveTransactionsApi {
   /// Get a transaction by its ID.
   ///
   /// The data field is not included for transaction formats 2 and above, perform a seperate `getData(id)` request to retrieve the data.
-  Future<Transaction> get(String id) async {
+  Future<Transaction?> get(String id) async {
     final res = await _api.get('tx/$id');
 
     if (res.statusCode == 200) {
@@ -38,24 +38,18 @@ class ArweaveTransactionsApi {
   /// and the transaction owner if a wallet is specified,
 
   Future<Transaction> prepare(
-    Transaction transaction, [
-    String owner,
-  ]) async {
-    assert(transaction.data != null ||
-        (transaction.target != null && transaction.quantity != null));
-
+    Transaction transaction,
+    Wallet wallet,
+  ) async {
     if (transaction.format == 1) {
       throw ArgumentError('Creating v1 transactions is not supported.');
     }
-
-    if (transaction.owner == null && owner != null) {
-      transaction.setOwner(owner);
+    if (transaction.owner == null) {
+      transaction.setOwner(await wallet.getOwner());
     }
-
     if (transaction.lastTx == null) {
       transaction.setLastTx(await getTransactionAnchor());
     }
-
     if (transaction.reward == BigInt.zero) {
       transaction.setReward(
         await getPrice(

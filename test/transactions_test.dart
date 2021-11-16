@@ -19,10 +19,9 @@ void main() {
     final signaturePattern = RegExp(r'^[a-z0-9-_]+$', caseSensitive: false);
     test('create, sign, and verify data transaction', () async {
       final wallet = await getTestWallet();
-      final owner = await wallet.getOwner();
-      final transaction = await client.transactions
-          .prepare(Transaction.withBlobData(data: utf8.encode('test')), owner);
-
+      final transaction = await client.transactions.prepare(
+          Transaction.withBlobData(data: utf8.encode('test') as Uint8List),
+          wallet);
       transaction
         ..addTag('test-tag-1', 'test-value-1')
         ..addTag('test-tag-2', 'test-value-2')
@@ -107,8 +106,9 @@ void main() {
         () async {
       final data = await File('test/fixtures/1mb.bin').readAsBytes();
 
-      final transaction = await client.transactions
-          .prepare(Transaction.withBlobData(data: data, reward: BigInt.one));
+      final transaction = await client.transactions.prepare(
+          Transaction.withBlobData(data: data, reward: BigInt.one),
+          await getTestWallet());
       expect(transaction.setData(data), completion(null));
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
@@ -119,8 +119,9 @@ void main() {
         () async {
       final data = await File('test/fixtures/lotsofdata.bin').readAsBytes();
 
-      final transaction = await client.transactions
-          .prepare(Transaction.withBlobData(data: data, reward: BigInt.one));
+      final transaction = await client.transactions.prepare(
+          Transaction.withBlobData(data: data, reward: BigInt.one),
+          await getTestWallet());
       expect(transaction.setData(data), completion(null));
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
@@ -129,8 +130,9 @@ void main() {
     test('error when invalid data is set on prepared transaction', () async {
       final data = await File('test/fixtures/lotsofdata.bin').readAsBytes();
 
-      final transaction = await client.transactions
-          .prepare(Transaction.withBlobData(data: data, reward: BigInt.one));
+      final transaction = await client.transactions.prepare(
+          Transaction.withBlobData(data: data, reward: BigInt.one),
+          await getTestWallet());
       expect(
         transaction.setData(Uint8List.sublistView(data, 1)),
         throwsStateError,
@@ -140,11 +142,11 @@ void main() {
     });
 
     test('upload data to transaction already on network', () async {
-      final transaction = await client.transactions
-          .get('8C6yYu5pWMADLSd65wTnrzgN-9eLj9sFbyVC3prSaFs');
+      final transaction = await (client.transactions
+          .get('8C6yYu5pWMADLSd65wTnrzgN-9eLj9sFbyVC3prSaFs'));
 
-      await transaction
-          .setData(utf8.encode('{"name":"Blockchains & Cryptocurrencies"}'));
+      await transaction!.setData(utf8
+          .encode('{"name":"Blockchains & Cryptocurrencies"}') as Uint8List);
 
       expect(
         client.transactions.upload(transaction, dataOnly: true).drain(),
@@ -157,8 +159,8 @@ void main() {
       final wallet = await getTestWallet();
       final owner = await wallet.getOwner();
       final transaction = await client.transactions.prepare(
-        Transaction.withBlobData(data: data),
-        owner,
+        Transaction.withBlobData(data: data as Uint8List),
+        wallet,
       );
 
       final signatureData = await transaction.getSignatureData();
@@ -177,8 +179,8 @@ void main() {
     });
 
     test('get and verify transaction', () async {
-      final transaction = await client.transactions.get(liveDataTxId);
-      expect(await transaction.verify(), isTrue);
+      final transaction = await (client.transactions.get(liveDataTxId));
+      expect(await transaction!.verify(), isTrue);
     });
   });
 }

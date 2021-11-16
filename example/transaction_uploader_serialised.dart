@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
 
@@ -13,10 +14,8 @@ void main() async {
   final owner = await wallet.getOwner();
   // Create a data transaction.
   final transaction = await client.transactions.prepare(
-    Transaction.withBlobData(data: utf8.encode('Hello world!')),
-    owner,
-  );
-
+    Transaction.withBlobData(data: utf8.encode('Hello world!') as Uint8List),
+    wallet,
   // Sign the transaction.
   final signatureData = await transaction.getSignatureData();
   final rawSignature = await wallet.sign(signatureData);
@@ -31,7 +30,7 @@ void main() async {
   // Deserialise the uploader and provide the original transaction data again
   // as it isn't serialised along with the uploader.
   final reloadedUploader = await TransactionUploader.deserialize(
-      uploaderJson, utf8.encode('Hello world!'), client.api);
+      uploaderJson, utf8.encode('Hello world!') as Uint8List, client.api);
 
   // Resume the upload.
   while (!reloadedUploader.isComplete) {

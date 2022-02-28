@@ -33,7 +33,7 @@ class TransactionUploader {
 
   int lastResponseStatus = 0;
   String lastResponseError = '';
-  List<TransactionChunk> failedChunks = [];
+  final List<TransactionChunk> _failedChunks = [];
 
   final Transaction _transaction;
   final ArweaveApi _api;
@@ -77,9 +77,9 @@ class TransactionUploader {
   }
 
   bool get isComplete =>
-      _txPosted && _chunkOffset >= _transaction.chunks!.chunks.length;
+      _txPosted && uploadedChunks == _transaction.chunks!.chunks.length;
   int get totalChunks => _transaction.chunks!.chunks.length;
-  int get uploadedChunks => _chunkOffset;
+  int uploadedChunks = 0;
 
   /// The progress of the current upload ranging from 0 to 1.
   double get progress => uploadedChunks / totalChunks;
@@ -95,21 +95,30 @@ class TransactionUploader {
       await _postTransaction();
       return;
     }
-
-    final chunks = List.from(failedChunks +
-        _transaction.getChunks(
-            _chunkOffset, MAX_CHUNKS_BATCH_SIZE - failedChunks.length));
-    failedChunks.clear();
+    final newChunksCount = MAX_CHUNKS_BATCH_SIZE - _failedChunks.length;
+    final chunks = List.from(
+        _failedChunks + _transaction.getChunks(_chunkOffset, newChunksCount));
+    _failedChunks.clear();
+    _chunkOffset += newChunksCount;
     try {
       await Future.wait(chunks.map((chunk) async {
         final res = await _api.post('chunk', body: json.encode(chunk));
         if (res.statusCode != 200) {
-          failedChunks.add(chunk);
+          lastResponseError = getResponseError(res);
+          if (FATAL_CHUNK_UPLOAD_ERRORS.contains(lastResponseError)) {
+            throw StateError(
+              'Fatal error uploading chunk: ${chunks.indexOf(chunk)}: $lastResponseError',
+            );
+          } else {
+            _failedChunks.add(chunk);
+          }
+        } else {
+          uploadedChunks++;
         }
       }));
-      _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());
+      rethrow;
     }
   }
 

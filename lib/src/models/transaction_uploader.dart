@@ -101,12 +101,11 @@ class TransactionUploader {
     try {
       await Future.wait(chunks.map((chunk) async {
         final res = await _api.post('chunk', body: json.encode(chunk));
-        if (res.statusCode == 200) {
-          _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
-        } else {
+        if (res.statusCode != 200) {
           failedChunks.add(chunk);
           //TODO: Handle failed
         }
+        _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
       }));
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());

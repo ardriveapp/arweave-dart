@@ -242,17 +242,7 @@ class Transaction implements TransactionBase {
         ? size
         : offset + size - chunks!.chunks.length;
     for (var i = offset; i < limit; i++) {
-      final proof = chunks!.proofs[i];
-      final chunk = chunks!.chunks[i];
-
-      chunksToSend.add(TransactionChunk(
-        dataRoot: dataRoot,
-        dataSize: dataSize,
-        dataPath: encodeBytesToBase64(proof.proof),
-        offset: proof.offset.toString(),
-        chunk: encodeBytesToBase64(Uint8List.sublistView(
-            data, chunk.minByteRange, chunk.maxByteRange)),
-      ));
+      chunksToSend.add(getChunk(i));
     }
     return chunksToSend;
   }

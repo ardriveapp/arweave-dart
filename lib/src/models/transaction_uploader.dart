@@ -88,43 +88,17 @@ class TransactionUploader {
       return;
     }
     final chunks = <TransactionChunk>[];
-    final failedChunks = <TransactionChunk>[];
     int index = 0;
     while (index < totalChunks) {
       chunks.add(_transaction.getChunk(_chunkIndex));
       index++;
     }
 
-    final uploadRequest = Future.wait(
-      chunks.map((chunk) async {
-        try {
-          return _api.post('chunk', body: json.encode(chunk)).then((response) {
-            if (response.statusCode == 200) {
-              _chunkIndex++;
-            } else {
-              failedChunks.add(chunk);
-            }
-          });
-        } catch (e) {
-          failedChunks.add(chunk);
-        }
-      }),
-    );
+    final uploadRequest = Future.wait(chunks.map((chunk) =>
+        _api.post('chunk', body: json.encode(chunk)).then((response) {
+          _chunkIndex++;
+        })));
     await uploadRequest;
-    while (failedChunks.isNotEmpty) {
-      try {
-        await _api
-            .post('chunk', body: json.encode(failedChunks.first))
-            .then((response) {
-          if (response.statusCode == 200) {
-            _chunkIndex++;
-            failedChunks.removeAt(0);
-          }
-        });
-      } catch (e) {
-        print('Chunk upload failed. Retrying..');
-      }
-    }
   }
 
   Future<void> _postTransaction() async {

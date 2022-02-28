@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:retry/retry.dart';
 
 import 'gateway_common.dart' if (dart.library.html) 'gateway_web.dart';
 
@@ -15,10 +16,12 @@ class ArweaveApi {
   Future<http.Response> get(String endpoint) =>
       _client.get(_getEndpointUri(endpoint));
 
-  Future<http.Response> post(String endpoint, {dynamic body}) => _client.post(
-        _getEndpointUri(endpoint),
-        body: body,
-      );
+  Future<http.Response> post(String endpoint, {dynamic body}) {
+    return retry(
+      () => _client.post(_getEndpointUri(endpoint), body: body),
+      maxAttempts: 80,
+    );
+  }
 
   Uri _getEndpointUri(String endpoint) =>
       Uri.parse('${gatewayUrl.origin}/$endpoint');

@@ -94,10 +94,12 @@ class TransactionUploader {
       index++;
     }
 
-    final uploadRequest = Future.wait(chunks.map((chunk) =>
-        _api.post('chunk', body: json.encode(chunk)).then((response) {
-          _chunkIndex++;
-        })));
+    final uploadRequest = Future.wait(chunks.map((chunk) async {
+      final response = await _api.post('chunk', body: json.encode(chunk));
+      if (response.statusCode != 200) {
+        _chunkIndex++;
+      }
+    }));
     await uploadRequest;
   }
 

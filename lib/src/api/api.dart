@@ -17,7 +17,7 @@ class ArweaveApi {
       _client.get(_getEndpointUri(endpoint));
 
   Future<http.Response> post(String endpoint, {dynamic body}) {
-    return retry(
+    return retry<http.Response>(
       () => _client.post(_getEndpointUri(endpoint), body: body),
       maxAttempts: 80,
     );

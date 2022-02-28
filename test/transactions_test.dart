@@ -165,7 +165,7 @@ void main() {
 
       // Technically this should fail since the test wallet has no AR but the
       // HTTP API doesn't return an error so there's nothing we can do about it.
-      expect(reloadedUploader.uploadChunk(), completion(null));
+      expect(reloadedUploader.uploadChunks(), completion(null));
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
     });

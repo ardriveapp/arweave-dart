@@ -82,7 +82,7 @@ class ArweaveTransactionsApi {
 
     while (!uploader.isComplete) {
       if (!dryRun) {
-        await uploader.uploadChunk();
+        await uploader.uploadChunks();
       }
       yield uploader;
     }
@@ -98,7 +98,7 @@ class ArweaveTransactionsApi {
     }
     final uploader = await getUploader(transaction);
     while (!uploader.isComplete) {
-      await uploader.uploadChunk();
+      await uploader.uploadChunks();
     }
   }
 }

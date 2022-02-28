@@ -87,7 +87,7 @@ class TransactionUploader {
   /// On the first call this posts the transaction
   /// itself and on any subsequent calls uploads the
   /// next chunk until it completes.
-  Future<void> uploadChunk() async {
+  Future<void> _uploadChunk() async {
     if (isComplete) throw StateError('Upload is already complete.');
 
     if (lastResponseError.isNotEmpty) {
@@ -151,6 +151,25 @@ class TransactionUploader {
         }
       }
     }
+  }
+
+  Future<void> uploadChunks() async {
+    if (!_txPosted) {
+      await _postTransaction();
+      return;
+    }
+    final chunks = <TransactionChunk>[];
+    int index = 0;
+    while (index < totalChunks) {
+      chunks.add(_transaction.getChunk(_chunkIndex));
+      index++;
+    }
+
+    final uploadRequest = Future.wait(
+        chunks.map((e) => _api.post('chunk', body: json.encode(e)).then(
+              (value) => {_chunkIndex++},
+            )));
+    await uploadRequest;
   }
 
   Future<void> _postTransaction() async {

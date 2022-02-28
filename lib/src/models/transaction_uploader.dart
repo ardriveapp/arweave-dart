@@ -96,8 +96,10 @@ class TransactionUploader {
       return;
     }
 
-    final chunks = _transaction.getChunks(_chunkOffset, MAX_CHUNKS_BATCH_SIZE);
-
+    final chunks = List.from(failedChunks +
+        _transaction.getChunks(
+            _chunkOffset, MAX_CHUNKS_BATCH_SIZE - failedChunks.length));
+    failedChunks.clear();
     try {
       await Future.wait(chunks.map((chunk) async {
         final res = await _api.post('chunk', body: json.encode(chunk));
@@ -105,14 +107,6 @@ class TransactionUploader {
           failedChunks.add(chunk);
         }
       }));
-      if (failedChunks.isNotEmpty) {
-        await Future.wait(failedChunks.map((chunk) async {
-          final res = await _api.post('chunk', body: json.encode(chunk));
-          if (res.statusCode == 200) {
-            failedChunks.remove(chunk);
-          }
-        }));
-      }
       _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());

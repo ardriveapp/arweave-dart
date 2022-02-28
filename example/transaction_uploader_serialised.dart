@@ -34,6 +34,6 @@ void main() async {
 
   // Resume the upload.
   while (!reloadedUploader.isComplete) {
-    await reloadedUploader.uploadChunk();
+    await reloadedUploader.batchUploadChunks();
   }
 }

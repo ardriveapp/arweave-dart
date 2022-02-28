@@ -4,12 +4,12 @@ import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
 import 'package:arweave/src/api/api.dart';
-import 'package:http/http.dart';
 
 import '../utils.dart';
 
 /// Maximum amount of chunks we will upload in the body.
 const MAX_CHUNKS_IN_BODY = 1;
+const MAX_CHUNKS_BATCH_SIZE = 100;
 
 /// Amount we will delay on receiving an error response but do want to continue.
 const ERROR_DELAY = 1000 * 40;
@@ -26,13 +26,14 @@ const FATAL_CHUNK_UPLOAD_ERRORS = [
 ];
 
 class TransactionUploader {
-  int _chunkIndex = 0;
+  int _chunkOffset = 0;
   bool _txPosted = false;
   int _lastRequestTimeEnd = 0;
   int _totalErrors = 0;
 
   int lastResponseStatus = 0;
   String lastResponseError = '';
+  List<TransactionChunk> failedChunks = [];
 
   final Transaction _transaction;
   final ArweaveApi _api;
@@ -59,7 +60,7 @@ class TransactionUploader {
   })  : _api = api,
         _transaction = transaction {
     if (chunkIndex != null) {
-      _chunkIndex = chunkIndex;
+      _chunkOffset = chunkIndex;
     }
     if (txPosted != null) {
       _txPosted = txPosted;
@@ -76,80 +77,39 @@ class TransactionUploader {
   }
 
   bool get isComplete =>
-      _txPosted && _chunkIndex >= _transaction.chunks!.chunks.length;
+      _txPosted && _chunkOffset >= _transaction.chunks!.chunks.length;
   int get totalChunks => _transaction.chunks!.chunks.length;
-  int get uploadedChunks => _chunkIndex;
+  int get uploadedChunks => _chunkOffset;
 
   /// The progress of the current upload ranging from 0 to 1.
   double get progress => uploadedChunks / totalChunks;
 
-  /// Uploads a chunk of the transaction.
+  /// Uploads a batch of chunks of the transaction.
   /// On the first call this posts the transaction
   /// itself and on any subsequent calls uploads the
-  /// next chunk until it completes.
-  Future<void> uploadChunk() async {
+  /// next chunk batch until it completes.
+  Future<void> batchUploadChunks() async {
     if (isComplete) throw StateError('Upload is already complete.');
-
-    if (lastResponseError.isNotEmpty) {
-      _totalErrors++;
-    } else {
-      _totalErrors = 0;
-    }
-
-    // We have been trying for about an hour receiving an
-    // error every time, so eventually bail.
-    if (_totalErrors == 100) {
-      throw StateError(
-          'Unable to complete upload: $lastResponseStatus: $lastResponseError');
-    }
-
-    var delay = lastResponseError.isEmpty
-        ? 0
-        : max(
-            _lastRequestTimeEnd +
-                ERROR_DELAY -
-                DateTime.now().millisecondsSinceEpoch,
-            ERROR_DELAY);
-
-    if (delay > 0) {
-      // Jitter delay because networks, subtract up to 30% from 40 seconds
-      delay = delay - (delay * _random.nextDouble() * 0.30).toInt();
-      await Future.delayed(Duration(milliseconds: delay));
-    }
-
-    lastResponseError = '';
 
     if (!_txPosted) {
       await _postTransaction();
       return;
     }
 
-    final chunk = _transaction.getChunk(_chunkIndex);
-
-    // TODO: Validate chunks
-    // final chunkValid = await validatePath(this.transaction.chunks!.data_root, parseInt(chunk.offset), 0, parseInt(chunk.data_size), ArweaveUtils.b64UrlToBuffer(chunk.data_path))
-    // if (!chunkValid)
-    //  throw StateError('Unable to validate chunk: $_chunkIndex');
-
-    // Catch network errors and turn them into objects with status -1 and an error message.
-    Response? res;
+    final chunks = List.from(failedChunks +
+        _transaction.getChunks(
+            _chunkOffset, MAX_CHUNKS_BATCH_SIZE - failedChunks.length));
+    failedChunks.clear();
     try {
-      res = await _api.post('chunk', body: json.encode(chunk));
+      await Future.wait(chunks.map((chunk) async {
+        final res = await _api.post('chunk', body: json.encode(chunk));
+        if (res.statusCode != 200) {
+          failedChunks.add(chunk);
+        }
+      }));
+      _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());
-    }
-    _lastRequestTimeEnd = DateTime.now().millisecondsSinceEpoch;
-    if (res != null) {
-      lastResponseStatus = res.statusCode;
-      if (lastResponseStatus == 200) {
-        _chunkIndex++;
-      } else {
-        lastResponseError = getResponseError(res);
-        if (FATAL_CHUNK_UPLOAD_ERRORS.contains(lastResponseError)) {
-          throw StateError(
-              'Fatal error uploading chunk: $_chunkIndex: $lastResponseError');
-        }
-      }
     }
   }
 
@@ -172,7 +132,7 @@ class TransactionUploader {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         // This transaction and it's data is uploaded.
         _txPosted = true;
-        _chunkIndex = MAX_CHUNKS_IN_BODY;
+        _chunkOffset = MAX_CHUNKS_IN_BODY;
         return;
       }
 
@@ -213,7 +173,7 @@ class TransactionUploader {
   }
 
   Map<String, dynamic> serialize() => <String, dynamic>{
-        'chunkIndex': _chunkIndex,
+        'chunkIndex': _chunkOffset,
         'txPosted': _txPosted,
         'transaction': _transaction.toJson()..['data'] = null,
         'lastRequestTimeEnd': _lastRequestTimeEnd,

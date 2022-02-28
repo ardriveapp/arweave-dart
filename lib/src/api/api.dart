@@ -20,14 +20,7 @@ class ArweaveApi {
 
   Future<http.Response> post(String endpoint, {dynamic body}) async {
     return await retry<http.Response>(
-      () async {
-        final res = await _client.post(_getEndpointUri(endpoint), body: body);
-        if (res.statusCode == 200) {
-          return res;
-        } else {
-          throw Exception(res.body);
-        }
-      },
+      () => _client.post(_getEndpointUri(endpoint), body: body),
       maxAttempts: 80,
     );
   }

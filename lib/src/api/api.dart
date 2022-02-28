@@ -13,11 +13,13 @@ class ArweaveApi {
   })  : gatewayUrl = gatewayUrl ?? getDefaultGateway(),
         _client = http.Client();
 
-  Future<http.Response> get(String endpoint) =>
-      _client.get(_getEndpointUri(endpoint));
+  Future<http.Response> get(String endpoint) => retry<http.Response>(
+        () => _client.get(_getEndpointUri(endpoint)),
+        maxAttempts: 80,
+      );
 
-  Future<http.Response> post(String endpoint, {dynamic body}) {
-    return retry<http.Response>(
+  Future<http.Response> post(String endpoint, {dynamic body}) async {
+    return await retry<http.Response>(
       () => _client.post(_getEndpointUri(endpoint), body: body),
       maxAttempts: 80,
     );

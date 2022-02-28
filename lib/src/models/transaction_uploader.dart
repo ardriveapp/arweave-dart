@@ -9,6 +9,7 @@ import '../utils.dart';
 
 /// Maximum amount of chunks we will upload in the body.
 const MAX_CHUNKS_IN_BODY = 1;
+const MAX_CHUNKS_BATCH_SIZE = 100;
 
 /// Amount we will delay on receiving an error response but do want to continue.
 const ERROR_DELAY = 1000 * 40;
@@ -25,13 +26,14 @@ const FATAL_CHUNK_UPLOAD_ERRORS = [
 ];
 
 class TransactionUploader {
-  int uploadedChunks = 0;
+  int _chunkOffset = 0;
   bool _txPosted = false;
   int _lastRequestTimeEnd = 0;
   int _totalErrors = 0;
 
   int lastResponseStatus = 0;
   String lastResponseError = '';
+  List<TransactionChunk> failedChunks = [];
 
   final Transaction _transaction;
   final ArweaveApi _api;
@@ -58,7 +60,7 @@ class TransactionUploader {
   })  : _api = api,
         _transaction = transaction {
     if (chunkIndex != null) {
-      uploadedChunks = chunkIndex;
+      _chunkOffset = chunkIndex;
     }
     if (txPosted != null) {
       _txPosted = txPosted;
@@ -75,28 +77,40 @@ class TransactionUploader {
   }
 
   bool get isComplete =>
-      _txPosted && uploadedChunks >= _transaction.chunks!.chunks.length;
+      _txPosted && _chunkOffset >= _transaction.chunks!.chunks.length;
   int get totalChunks => _transaction.chunks!.chunks.length;
+  int get uploadedChunks => _chunkOffset;
 
   /// The progress of the current upload ranging from 0 to 1.
   double get progress => uploadedChunks / totalChunks;
 
-  Future<void> uploadChunks() async {
-    await _postTransaction();
-    final chunks = <TransactionChunk>[];
-    int index = 0;
-    while (index < totalChunks) {
-      chunks.add(_transaction.getChunk(index));
-      index++;
+  /// Uploads a chunk of the transaction.
+  /// On the first call this posts the transaction
+  /// itself and on any subsequent calls uploads the
+  /// next chunk until it completes.
+  Future<void> uploadChunk() async {
+    if (isComplete) throw StateError('Upload is already complete.');
+
+    if (!_txPosted) {
+      await _postTransaction();
+      return;
     }
 
-    final uploadRequest = Future.wait(chunks.map((chunk) async {
-      final response = await _api.post('chunk', body: json.encode(chunk));
-      if (response.statusCode != 200) {
-        uploadedChunks++;
-      }
-    }));
-    await uploadRequest;
+    final chunks = _transaction.getChunks(_chunkOffset, MAX_CHUNKS_BATCH_SIZE);
+
+    try {
+      await Future.wait(chunks.map((chunk) async {
+        final res = await _api.post('chunk', body: json.encode(chunk));
+        if (res.statusCode == 200) {
+          _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
+        } else {
+          failedChunks.add(chunk);
+          //TODO: Handle failed
+        }
+      }));
+    } catch (e) {
+      print("Error posting to /chunk endpoint: " + e.toString());
+    }
   }
 
   Future<void> _postTransaction() async {
@@ -118,7 +132,7 @@ class TransactionUploader {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         // This transaction and it's data is uploaded.
         _txPosted = true;
-        uploadedChunks = MAX_CHUNKS_IN_BODY;
+        _chunkOffset = MAX_CHUNKS_IN_BODY;
         return;
       }
 
@@ -159,7 +173,7 @@ class TransactionUploader {
   }
 
   Map<String, dynamic> serialize() => <String, dynamic>{
-        'chunkIndex': uploadedChunks,
+        'chunkIndex': _chunkOffset,
         'txPosted': _txPosted,
         'transaction': _transaction.toJson()..['data'] = null,
         'lastRequestTimeEnd': _lastRequestTimeEnd,

@@ -234,6 +234,29 @@ class Transaction implements TransactionBase {
     );
   }
 
+  /// Returns multiple chunks in a format suitable for posting to /chunk.
+  List<TransactionChunk> getChunks(int offset, int size) {
+    if (chunks == null) throw StateError('Chunks have not been prepared.');
+    final chunksToSend = <TransactionChunk>[];
+    final limit = offset + size > chunks!.chunks.length
+        ? size
+        : offset + size - chunks!.chunks.length;
+    for (var i = offset; i < limit; i++) {
+      final proof = chunks!.proofs[i];
+      final chunk = chunks!.chunks[i];
+
+      chunksToSend.add(TransactionChunk(
+        dataRoot: dataRoot,
+        dataSize: dataSize,
+        dataPath: encodeBytesToBase64(proof.proof),
+        offset: proof.offset.toString(),
+        chunk: encodeBytesToBase64(Uint8List.sublistView(
+            data, chunk.minByteRange, chunk.maxByteRange)),
+      ));
+    }
+    return chunksToSend;
+  }
+
   @override
   Future<Uint8List> getSignatureData() async {
     switch (format) {

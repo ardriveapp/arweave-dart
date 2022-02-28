@@ -105,8 +105,8 @@ class TransactionUploader {
           failedChunks.add(chunk);
           //TODO: Handle failed
         }
-        _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
       }));
+      _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());
     }

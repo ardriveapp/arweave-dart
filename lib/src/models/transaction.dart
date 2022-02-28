@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
@@ -238,9 +239,7 @@ class Transaction implements TransactionBase {
   List<TransactionChunk> getChunks(int offset, int size) {
     if (chunks == null) throw StateError('Chunks have not been prepared.');
     final chunksToSend = <TransactionChunk>[];
-    final limit = offset + size > chunks!.chunks.length
-        ? size
-        : offset + size - chunks!.chunks.length;
+    final limit = min(offset + size, chunks!.chunks.length);
     for (var i = offset; i < limit; i++) {
       chunksToSend.add(getChunk(i));
     }

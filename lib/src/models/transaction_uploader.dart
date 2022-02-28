@@ -103,9 +103,16 @@ class TransactionUploader {
         final res = await _api.post('chunk', body: json.encode(chunk));
         if (res.statusCode != 200) {
           failedChunks.add(chunk);
-          //TODO: Handle failed
         }
       }));
+      if (failedChunks.isNotEmpty) {
+        await Future.wait(failedChunks.map((chunk) async {
+          final res = await _api.post('chunk', body: json.encode(chunk));
+          if (res.statusCode == 200) {
+            failedChunks.remove(chunk);
+          }
+        }));
+      }
       _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());

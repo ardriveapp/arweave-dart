@@ -80,7 +80,7 @@ class ArweaveTransactionsApi {
   }) async* {
     final uploader = await getUploader(transaction, forDataOnly: dataOnly);
 
-    while (!uploader.isComplete) {
+    while (!uploader.isComplete || uploader.failedChunks.isNotEmpty) {
       if (!dryRun) {
         await uploader.uploadChunk();
       }

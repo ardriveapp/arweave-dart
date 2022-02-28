@@ -90,7 +90,7 @@ class TransactionUploader {
     final chunks = <TransactionChunk>[];
     int index = 0;
     while (index < totalChunks) {
-      chunks.add(_transaction.getChunk(_chunkIndex));
+      chunks.add(_transaction.getChunk(index));
       index++;
     }
 

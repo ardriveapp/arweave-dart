@@ -25,7 +25,7 @@ const FATAL_CHUNK_UPLOAD_ERRORS = [
 ];
 
 class TransactionUploader {
-  int _chunkIndex = 0;
+  int uploadedChunks = 0;
   bool _txPosted = false;
   int _lastRequestTimeEnd = 0;
   int _totalErrors = 0;
@@ -58,7 +58,7 @@ class TransactionUploader {
   })  : _api = api,
         _transaction = transaction {
     if (chunkIndex != null) {
-      _chunkIndex = chunkIndex;
+      uploadedChunks = chunkIndex;
     }
     if (txPosted != null) {
       _txPosted = txPosted;
@@ -75,18 +75,14 @@ class TransactionUploader {
   }
 
   bool get isComplete =>
-      _txPosted && _chunkIndex >= _transaction.chunks!.chunks.length;
+      _txPosted && uploadedChunks >= _transaction.chunks!.chunks.length;
   int get totalChunks => _transaction.chunks!.chunks.length;
-  int get uploadedChunks => _chunkIndex;
 
   /// The progress of the current upload ranging from 0 to 1.
   double get progress => uploadedChunks / totalChunks;
 
   Future<void> uploadChunks() async {
-    if (!_txPosted) {
-      await _postTransaction();
-      return;
-    }
+    await _postTransaction();
     final chunks = <TransactionChunk>[];
     int index = 0;
     while (index < totalChunks) {
@@ -97,7 +93,7 @@ class TransactionUploader {
     final uploadRequest = Future.wait(chunks.map((chunk) async {
       final response = await _api.post('chunk', body: json.encode(chunk));
       if (response.statusCode != 200) {
-        _chunkIndex++;
+        uploadedChunks++;
       }
     }));
     await uploadRequest;
@@ -122,7 +118,7 @@ class TransactionUploader {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         // This transaction and it's data is uploaded.
         _txPosted = true;
-        _chunkIndex = MAX_CHUNKS_IN_BODY;
+        uploadedChunks = MAX_CHUNKS_IN_BODY;
         return;
       }
 
@@ -163,7 +159,7 @@ class TransactionUploader {
   }
 
   Map<String, dynamic> serialize() => <String, dynamic>{
-        'chunkIndex': _chunkIndex,
+        'chunkIndex': uploadedChunks,
         'txPosted': _txPosted,
         'transaction': _transaction.toJson()..['data'] = null,
         'lastRequestTimeEnd': _lastRequestTimeEnd,

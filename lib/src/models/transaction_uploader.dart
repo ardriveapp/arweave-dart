@@ -9,7 +9,7 @@ import '../utils.dart';
 
 /// Maximum amount of chunks we will upload in the body.
 const MAX_CHUNKS_IN_BODY = 1;
-const MAX_CHUNKS_BATCH_SIZE = 100;
+const MAX_CHUNKS_BATCH_SIZE = 32;
 
 /// Amount we will delay on receiving an error response but do want to continue.
 const ERROR_DELAY = 1000 * 40;

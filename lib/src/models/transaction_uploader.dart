@@ -114,8 +114,12 @@ class TransactionUploader {
             _failedChunks.add(chunk);
           }
         } else {
-          uploadChunk(_transaction.getChunk(_chunkOffset));
-          _chunkOffset++;
+          if (_failedChunks.isNotEmpty) {
+            await uploadChunk(_failedChunks.removeAt(0));
+          } else {
+            await uploadChunk(_transaction.getChunk(_chunkOffset));
+            _chunkOffset++;
+          }
           uploadedChunks++;
         }
       }

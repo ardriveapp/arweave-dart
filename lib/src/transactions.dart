@@ -81,9 +81,10 @@ class ArweaveTransactionsApi {
     final uploader = await getUploader(transaction, forDataOnly: dataOnly);
 
     if (!dryRun) {
-      uploader.batchUploadChunks();
+      return;
     }
     while (!uploader.isComplete) {
+      uploader.batchUploadChunks();
       await Future.delayed(Duration(milliseconds: 10));
       yield uploader;
     }

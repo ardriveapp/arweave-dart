@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
 import 'package:arweave/src/api/api.dart';
+import 'package:retry/retry.dart';
 
 import '../utils.dart';
 
@@ -28,12 +29,11 @@ const FATAL_CHUNK_UPLOAD_ERRORS = [
 class TransactionUploader {
   int _chunkOffset = 0;
   bool _txPosted = false;
+  bool _txPosting = false;
   int _lastRequestTimeEnd = 0;
   int _totalErrors = 0;
 
   int lastResponseStatus = 0;
-  String lastResponseError = '';
-  final List<TransactionChunk> _failedChunks = [];
 
   final Transaction _transaction;
   final ArweaveApi _api;
@@ -71,9 +71,6 @@ class TransactionUploader {
     if (lastResponseStatus != null) {
       this.lastResponseStatus = lastResponseStatus;
     }
-    if (lastResponseError != null) {
-      this.lastResponseError = lastResponseError;
-    }
   }
 
   bool get isComplete =>
@@ -88,40 +85,26 @@ class TransactionUploader {
   /// On the first call this posts the transaction
   /// itself and on any subsequent calls uploads the
   /// next chunk batch until it completes.
+  int _chunksInFlight = 0;
+
   Future<void> batchUploadChunks() async {
     if (isComplete) throw StateError('Upload is already complete.');
+    if (_chunksInFlight >= MAX_CHUNKS_BATCH_SIZE) {
+      return;
+    }
 
     if (!_txPosted) {
-      await _postTransaction();
-    }
-    final chunks = _transaction.getChunks(_chunkOffset, MAX_CHUNKS_BATCH_SIZE);
-    _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
-    try {
-      Future<void> uploadChunk(TransactionChunk chunk) async {
-        final res = await _api.post('chunk', body: json.encode(chunk));
-        if (res.statusCode != 200) {
-          lastResponseError = getResponseError(res);
-          if (FATAL_CHUNK_UPLOAD_ERRORS.contains(lastResponseError)) {
-            throw StateError(
-              'Fatal error uploading chunk: ${chunks.indexOf(chunk)}: $lastResponseError',
-            );
-          } else {
-            _failedChunks.add(chunk);
-          }
-        } else {
-          if (isComplete) {
-            return;
-          }
-          uploadedChunks++;
-          if (_failedChunks.isNotEmpty) {
-            await uploadChunk(_failedChunks.removeAt(0));
-          } else {
-            await uploadChunk(_transaction.getChunk(_chunkOffset));
-            _chunkOffset++;
-          }
-        }
+      if (_txPosting) {
+        return;
       }
+      await _postTransaction();
+      return;
+    }
 
+    final numChunksSendable = max(0, MAX_CHUNKS_BATCH_SIZE - _chunksInFlight);
+    final chunks = _transaction.getChunks(_chunkOffset, numChunksSendable);
+    _chunkOffset += chunks.length;
+    try {
       await Future.wait(chunks.map((chunk) => uploadChunk(chunk)));
     } catch (e) {
       print("Error posting to /chunk endpoint: " + e.toString());
@@ -129,10 +112,34 @@ class TransactionUploader {
     }
   }
 
+  Future<void> uploadChunk(TransactionChunk chunk) async {
+    _chunksInFlight++;
+    retry(
+      () async {
+        final res = await _api.post('chunk', body: json.encode(chunk));
+        if (res.statusCode != 200) {
+          final lastResponseError = getResponseError(res);
+          if (FATAL_CHUNK_UPLOAD_ERRORS.contains(lastResponseError)) {
+            _chunksInFlight--;
+            throw StateError(
+              'Fatal error uploading chunk at offset: ${chunk.offset} }: $lastResponseError',
+            );
+          } else {
+            throw RetryableError();
+          }
+        } else {
+          _chunksInFlight--;
+          uploadedChunks++;
+        }
+      },
+      retryIf: (error) => error is RetryableError,
+    );
+  }
+
   Future<void> _postTransaction() async {
     final uploadInBody = totalChunks <= MAX_CHUNKS_IN_BODY;
     final txJson = _transaction.toJson();
-
+    _txPosting = true;
     if (uploadInBody) {
       // TODO: Make async
       if (_transaction.tags.contains(Tag('Bundle-Format', 'binary'))) {
@@ -147,6 +154,7 @@ class TransactionUploader {
 
       if (res.statusCode >= 200 && res.statusCode < 300) {
         // This transaction and it's data is uploaded.
+        _txPosting = false;
         _txPosted = true;
         _chunkOffset = MAX_CHUNKS_IN_BODY;
         return;
@@ -184,7 +192,6 @@ class TransactionUploader {
       transaction: transaction,
       lastRequestTimeEnd: json['lastRequestTimeEnd'],
       lastResponseStatus: json['lastResponseStatus'],
-      lastResponseError: json['lastResponseError'],
     );
   }
 
@@ -194,6 +201,7 @@ class TransactionUploader {
         'transaction': _transaction.toJson()..['data'] = null,
         'lastRequestTimeEnd': _lastRequestTimeEnd,
         'lastResponseStatus': lastResponseStatus,
-        'lastResponseError': lastResponseError,
       };
 }
+
+class RetryableError implements Exception {}

@@ -94,10 +94,8 @@ class TransactionUploader {
     if (!_txPosted) {
       await _postTransaction();
     }
-    final newChunksCount = MAX_CHUNKS_BATCH_SIZE - _failedChunks.length;
-    final chunks = List.from(
-        _failedChunks + _transaction.getChunks(_chunkOffset, newChunksCount));
-    _failedChunks.clear();
+    final chunks = _transaction.getChunks(_chunkOffset, MAX_CHUNKS_BATCH_SIZE);
+    _chunkOffset += MAX_CHUNKS_BATCH_SIZE;
     try {
       Future<void> uploadChunk(TransactionChunk chunk) async {
         final res = await _api.post('chunk', body: json.encode(chunk));

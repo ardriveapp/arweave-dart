@@ -111,10 +111,10 @@ class TransactionUploader {
             _failedChunks.add(chunk);
           }
         } else {
-          uploadedChunks++;
           if (isComplete) {
             return;
           }
+          uploadedChunks++;
           if (_failedChunks.isNotEmpty) {
             await uploadChunk(_failedChunks.removeAt(0));
           } else {

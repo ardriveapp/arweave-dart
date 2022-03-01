@@ -100,9 +100,6 @@ class TransactionUploader {
     _failedChunks.clear();
     try {
       Future<void> uploadChunk(TransactionChunk chunk) async {
-        if (isComplete) {
-          return;
-        }
         final res = await _api.post('chunk', body: json.encode(chunk));
         if (res.statusCode != 200) {
           lastResponseError = getResponseError(res);
@@ -114,13 +111,16 @@ class TransactionUploader {
             _failedChunks.add(chunk);
           }
         } else {
+          uploadedChunks++;
+          if (isComplete) {
+            return;
+          }
           if (_failedChunks.isNotEmpty) {
             await uploadChunk(_failedChunks.removeAt(0));
           } else {
             await uploadChunk(_transaction.getChunk(_chunkOffset));
             _chunkOffset++;
           }
-          uploadedChunks++;
         }
       }
 

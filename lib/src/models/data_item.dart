@@ -2,15 +2,19 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:arweave/src/utils/bundle_tag_parser.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 import '../crypto/crypto.dart';
 import '../utils.dart';
 import 'models.dart';
 
+part 'data_item.g.dart';
+
 final MIN_BINARY_SIZE = 1044;
 
 /// ANS-104 [DataItem]
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
+@JsonSerializable()
 class DataItem implements TransactionBase {
   @override
   String get id => _id;
@@ -37,6 +41,8 @@ class DataItem implements TransactionBase {
   @override
   String get signature => _signature;
   late String _signature;
+
+  @JsonKey(ignore: true)
   late ByteBuffer binary;
 
   /// This constructor is reserved for JSON serialisation.
@@ -287,4 +293,7 @@ class DataItem implements TransactionBase {
     bytesBuilder.add(data);
     return bytesBuilder;
   }
+
+  /// Encodes the [DataItem] as JSON with the `data` as the original unencoded [Uint8List].
+  Map<String, dynamic> toJson() => _$DataItemToJson(this);
 }

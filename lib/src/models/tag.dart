@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'tag.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Tag {
   /// The tag's name encoded as Base64.
   final String name;

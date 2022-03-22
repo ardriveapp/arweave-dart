@@ -12,7 +12,7 @@ part 'transaction.g.dart';
 String _bigIntToString(BigInt v) => v.toString();
 BigInt _stringToBigInt(String v) => BigInt.parse(v);
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Transaction implements TransactionBase {
   @JsonKey(defaultValue: 1)
   final int format;

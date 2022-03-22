@@ -29,7 +29,7 @@ Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
       'id': instance.id,
       'last_tx': instance.lastTx,
       'owner': instance.owner,
-      'tags': instance.tags,
+      'tags': instance.tags.map((e) => e.toJson()).toList(),
       'target': instance.target,
       'quantity': _bigIntToString(instance.quantity),
       'data': instance.data,

@@ -14,7 +14,7 @@ final MIN_BINARY_SIZE = 1044;
 
 /// ANS-104 [DataItem]
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class DataItem implements TransactionBase {
   @JsonKey(defaultValue: 1)
   final int format = 1;

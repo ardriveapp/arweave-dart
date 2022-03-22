@@ -20,6 +20,6 @@ Map<String, dynamic> _$DataItemToJson(DataItem instance) => <String, dynamic>{
       'owner': instance.owner,
       'target': instance.target,
       'nonce': instance.nonce,
-      'tags': instance.tags,
+      'tags': instance.tags.map((e) => e.toJson()).toList(),
       'data': instance.data,
     };

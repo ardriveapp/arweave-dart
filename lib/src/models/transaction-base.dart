@@ -27,4 +27,6 @@ abstract class TransactionBase {
   Future<void> sign(Wallet wallet);
 
   Future<bool> verify();
+
+  Map<String, dynamic> toJson();
 }

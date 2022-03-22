@@ -311,5 +311,6 @@ class Transaction implements TransactionBase {
       _$TransactionFromJson(json);
 
   /// Encodes the [Transaction] as JSON with the `data` as the original unencoded [Uint8List].
+  @override
   Map<String, dynamic> toJson() => _$TransactionToJson(this);
 }

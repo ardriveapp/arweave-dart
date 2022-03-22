@@ -297,5 +297,6 @@ class DataItem implements TransactionBase {
   }
 
   /// Encodes the [DataItem] as JSON with the `data` as the original unencoded [Uint8List].
+  @override
   Map<String, dynamic> toJson() => _$DataItemToJson(this);
 }

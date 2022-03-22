@@ -3,6 +3,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:jwk/jwk.dart';
 import 'package:pointycastle/export.dart';
@@ -54,8 +55,8 @@ class Wallet {
       await _keyPair!.extractPublicKey().then((res) => res.n));
   Future<String> getAddress() async => ownerToAddress(await getOwner());
 
-  Future<Uint8List> sign(Uint8List message) async =>
-      rsaPssSign(message: message, keyPair: _keyPair!);
+  Future<Uint8List> sign(TransactionBase transaction) async => rsaPssSign(
+      message: await transaction.getSignatureData(), keyPair: _keyPair!);
 
   factory Wallet.fromJwk(Map<String, dynamic> jwk) {
     // Normalize the JWK so that it can be decoded by 'cryptography'.

@@ -16,6 +16,9 @@ final MIN_BINARY_SIZE = 1044;
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
 @JsonSerializable()
 class DataItem implements TransactionBase {
+  @JsonKey(defaultValue: 1)
+  final int format = 1;
+
   @override
   String get id => _id;
   late String _id;
@@ -112,7 +115,7 @@ class DataItem implements TransactionBase {
   Future<Uint8List> getSignatureData() => deepHash(
         [
           utf8.encode('dataitem'),
-          utf8.encode('1'), //Transaction format
+          utf8.encode(format.toString()), //Transaction format
           utf8.encode('1'), //Signature type
           decodeBase64ToBytes(owner),
           decodeBase64ToBytes(target),
@@ -125,8 +128,7 @@ class DataItem implements TransactionBase {
   /// Signs the [DataItem] using the specified wallet and sets the `id` and `signature` appropriately.
   @override
   Future<Uint8List> sign(Wallet wallet) async {
-    final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+    final rawSignature = await wallet.sign(this);
 
     _signature = encodeBytesToBase64(rawSignature);
 

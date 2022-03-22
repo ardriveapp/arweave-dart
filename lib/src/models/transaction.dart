@@ -277,8 +277,7 @@ class Transaction implements TransactionBase {
 
   @override
   Future<void> sign(Wallet wallet) async {
-    final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+    final rawSignature = await wallet.sign(this);
 
     _signature = encodeBytesToBase64(rawSignature);
 

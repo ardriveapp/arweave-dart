@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
-import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
 import 'utils.dart';
@@ -54,19 +52,6 @@ void main() {
       final wallet = await getTestWallet();
       expect(await wallet.getAddress(),
           equals('fOVzBRTBnyt4VrUUYadBH8yras_-jhgpmNgg-5b3vEw'));
-    }, onPlatform: {
-      'browser': Skip('dart:io unavailable'),
-    });
-
-    test('sign message with wallet', () async {
-      final wallet = await getTestWallet();
-      final message = utf8.encode('<test message>');
-
-      final signature = await wallet.sign(message as Uint8List);
-      expect(
-        utils.encodeBytesToBase64(signature),
-        startsWith('II5LxGnPt4WTSz9P__wMAdjzXWlZE-wGbKU7wm4DbGuPXB5Vifs'),
-      );
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
     });

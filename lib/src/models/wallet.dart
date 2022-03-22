@@ -58,6 +58,9 @@ class Wallet {
   Future<Uint8List> sign(TransactionBase transaction) async => rsaPssSign(
       message: await transaction.getSignatureData(), keyPair: _keyPair!);
 
+  Future<Uint8List> signMessage(Uint8List message) async =>
+      rsaPssSign(message: message, keyPair: _keyPair!);
+
   factory Wallet.fromJwk(Map<String, dynamic> jwk) {
     // Normalize the JWK so that it can be decoded by 'cryptography'.
     jwk = jwk.map((key, value) {

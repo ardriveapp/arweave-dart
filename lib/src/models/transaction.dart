@@ -313,4 +313,17 @@ class Transaction implements TransactionBase {
   /// Encodes the [Transaction] as JSON with the `data` as the original unencoded [Uint8List].
   @override
   Map<String, dynamic> toJson() => _$TransactionToJson(this);
+
+  Map<String, dynamic> toUnsignedJSON() => <String, dynamic>{
+        'format': format,
+        'last_tx': lastTx,
+        'owner': owner,
+        'tags': tags.map((e) => e.toJson()).toList(),
+        'target': target,
+        'quantity': _bigIntToString(quantity),
+        'data': data,
+        'data_size': dataSize,
+        'data_root': dataRoot,
+        'reward': _bigIntToString(reward),
+      };
 }

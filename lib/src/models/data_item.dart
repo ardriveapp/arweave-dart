@@ -41,6 +41,10 @@ class DataItem implements TransactionBase {
   @override
   late Uint8List data;
 
+  @JsonKey(name: 'data_size')
+  String get dataSize => _dataSize;
+  String _dataSize = '0';
+
   @override
   String get signature => _signature;
   late String _signature;
@@ -58,13 +62,18 @@ class DataItem implements TransactionBase {
     List<Tag>? tags,
     String? data,
     Uint8List? dataBytes,
+    String? dataSize,
   })  : target = target ?? '',
         nonce = nonce ?? '',
         _owner = owner ?? '',
         data = data != null
             ? decodeBase64ToBytes(data)
             : (dataBytes ?? Uint8List(0)),
-        _tags = tags ?? [];
+        _tags = tags ?? [] {
+    if (dataSize != null) {
+      _dataSize = dataSize;
+    }
+  }
 
   /// Constructs a [DataItem] with the specified JSON data and appropriate Content-Type tag.
   factory DataItem.withJsonData({
@@ -96,6 +105,7 @@ class DataItem implements TransactionBase {
         nonce: nonce,
         tags: tags,
         dataBytes: data,
+        dataSize: data.lengthInBytes.toString(),
       );
 
   @override
@@ -301,5 +311,12 @@ class DataItem implements TransactionBase {
   Map<String, dynamic> toJson() => _$DataItemToJson(this);
 
   @override
-  Map<String, dynamic> toUnsignedJson() => _$DataItemToJson(this);
+  Map<String, dynamic> toUnsignedJson() => <String, dynamic>{
+        'format': format,
+        'owner': owner,
+        'tags': tags.map((e) => e.toJson()).toList(),
+        'target': target,
+        'data': data,
+        'data_size': dataSize,
+      };
 }

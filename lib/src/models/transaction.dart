@@ -314,7 +314,7 @@ class Transaction implements TransactionBase {
   @override
   Map<String, dynamic> toJson() => _$TransactionToJson(this);
 
-  Map<String, dynamic> toUnsignedJSON() => <String, dynamic>{
+  Map<String, dynamic> toUnsignedJson() => <String, dynamic>{
         'format': format,
         'last_tx': lastTx,
         'owner': owner,

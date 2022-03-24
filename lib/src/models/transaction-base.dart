@@ -29,4 +29,5 @@ abstract class TransactionBase {
   Future<bool> verify();
 
   Map<String, dynamic> toJson();
+  Map<String, dynamic> toUnsignedJson();
 }

@@ -8,6 +8,7 @@ part of 'transaction.dart';
 
 Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
       format: json['format'] as int? ?? 1,
+      id: json['id'] as String?,
       lastTx: json['last_tx'] as String?,
       owner: json['owner'] as String?,
       tags: (json['tags'] as List<dynamic>?)
@@ -19,11 +20,13 @@ Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
       dataSize: json['data_size'] as String?,
       dataRoot: json['data_root'] as String?,
       reward: _stringToBigInt(json['reward'] as String),
+      signature: json['signature'] as String?,
     );
 
 Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
     <String, dynamic>{
       'format': instance.format,
+      'id': instance.id,
       'last_tx': instance.lastTx,
       'owner': instance.owner,
       'tags': instance.tags.map((e) => e.toJson()).toList(),
@@ -33,4 +36,5 @@ Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
       'data_size': instance.dataSize,
       'data_root': instance.dataRoot,
       'reward': _bigIntToString(instance.reward),
+      'signature': instance.signature,
     };

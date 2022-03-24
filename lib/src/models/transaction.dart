@@ -17,7 +17,6 @@ class Transaction implements TransactionBase {
   @JsonKey(defaultValue: 1)
   final int format;
 
-  @JsonKey(ignore: true)
   @override
   String get id => _id;
   late String _id;
@@ -61,7 +60,6 @@ class Transaction implements TransactionBase {
   BigInt get reward => _reward;
   late BigInt _reward;
 
-  @JsonKey(ignore: true)
   @override
   String get signature => _signature;
   late String _signature;

@@ -56,6 +56,8 @@ class DataItem implements TransactionBase {
   ///
   /// [DataItem.withJsonData()] and [DataItem.withBlobData()] are the recommended ways to construct data items.
   DataItem({
+    String? id,
+    String? signature,
     String? owner,
     String? target,
     String? nonce,
@@ -72,6 +74,13 @@ class DataItem implements TransactionBase {
         _tags = tags ?? [] {
     if (dataSize != null) {
       _dataSize = dataSize;
+    }
+    if (signature != null) {
+      _signature = signature;
+    }
+
+    if (id != null) {
+      _id = id;
     }
   }
 
@@ -316,6 +325,9 @@ class DataItem implements TransactionBase {
   /// Encodes the [DataItem] as JSON with the `data` as the original unencoded [Uint8List].
   @override
   Map<String, dynamic> toJson() => _$DataItemToJson(this);
+
+  factory DataItem.fromJson(Map<String, dynamic> json) =>
+      _$DataItemFromJson(json);
 
   @override
   Map<String, dynamic> toUnsignedJson() => <String, dynamic>{

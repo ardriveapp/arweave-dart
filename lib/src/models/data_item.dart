@@ -112,6 +112,15 @@ class DataItem implements TransactionBase {
   void setOwner(String owner) => _owner = owner;
 
   @override
+  void setId(String id) => _id = id;
+
+  @override
+  void setSignature(String signature) => _signature = signature;
+
+  @override
+  void setTags(List<Tag> tags) => _tags = tags;
+
+  @override
   void addTag(String name, String value) {
     tags.add(
       Tag(
@@ -137,14 +146,12 @@ class DataItem implements TransactionBase {
 
   /// Signs the [DataItem] using the specified wallet and sets the `id` and `signature` appropriately.
   @override
-  Future<Uint8List> sign(Wallet wallet) async {
-    final rawSignature = await wallet.sign(this);
+  Future<void> sign(Wallet wallet) async {
+    final signedTransaction = await wallet.sign(this);
 
-    _signature = encodeBytesToBase64(rawSignature);
-
-    final idHash = await sha256.hash(rawSignature);
-    _id = encodeBytesToBase64(idHash.bytes);
-    return Uint8List.fromList(idHash.bytes);
+    setId(signedTransaction.id);
+    setSignature(signedTransaction.signature!);
+    setTags(signedTransaction.tags);
   }
 
   int getSize() {

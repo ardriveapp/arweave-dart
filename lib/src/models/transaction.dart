@@ -174,6 +174,15 @@ class Transaction implements TransactionBase {
   @override
   void setOwner(String owner) => _owner = owner;
 
+  @override
+  void setId(String id) => _id = id;
+
+  @override
+  void setSignature(String signature) => _signature = signature;
+
+  @override
+  void setTags(List<Tag> tags) => _tags = tags;
+
   /// Sets the data and data size of this [Transaction].
   ///
   /// Also chunks and validates the incoming data for format 2 transactions.
@@ -277,12 +286,11 @@ class Transaction implements TransactionBase {
 
   @override
   Future<void> sign(Wallet wallet) async {
-    final rawSignature = await wallet.sign(this);
+    final signedTransaction = await wallet.sign(this);
 
-    _signature = encodeBytesToBase64(rawSignature);
-
-    final idHash = await sha256.hash(rawSignature);
-    _id = encodeBytesToBase64(idHash.bytes);
+    setId(signedTransaction.id);
+    setSignature(signedTransaction.signature!);
+    setTags(signedTransaction.tags);
   }
 
   @override

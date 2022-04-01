@@ -316,7 +316,7 @@ class DataItem implements TransactionBase {
         'owner': owner,
         'tags': tags.map((e) => e.toJson()).toList(),
         'target': target,
-        'data': data,
+        'data': base64UrlEncode(data),
         'data_size': dataSize,
       };
 }

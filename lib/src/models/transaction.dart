@@ -322,7 +322,7 @@ class Transaction implements TransactionBase {
         'tags': tags.map((e) => e.toJson()).toList(),
         'target': target,
         'quantity': _bigIntToString(quantity),
-        'data': data,
+        'data': base64UrlEncode(data),
         'data_size': dataSize,
         'data_root': dataRoot,
         'reward': _bigIntToString(reward),

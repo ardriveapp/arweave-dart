@@ -55,8 +55,14 @@ class Wallet {
       await _keyPair!.extractPublicKey().then((res) => res.n));
   Future<String> getAddress() async => ownerToAddress(await getOwner());
 
-  Future<Uint8List> sign(TransactionBase transaction) async => rsaPssSign(
-      message: await transaction.getSignatureData(), keyPair: _keyPair!);
+  Future<String> sign(TransactionBase transaction) async {
+    return encodeBytesToBase64(
+      await rsaPssSign(
+        message: await transaction.getSignatureData(),
+        keyPair: _keyPair!,
+      ),
+    );
+  }
 
   Future<Uint8List> signMessage(Uint8List message) async =>
       rsaPssSign(message: message, keyPair: _keyPair!);

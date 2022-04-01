@@ -14,7 +14,7 @@ BigInt _stringToBigInt(String v) => BigInt.parse(v);
 
 @JsonSerializable(explicitToJson: true)
 class Transaction implements TransactionBase {
-  @JsonKey(defaultValue: 1)
+  @JsonKey(defaultValue: 2)
   final int format;
 
   @override
@@ -322,7 +322,7 @@ class Transaction implements TransactionBase {
         'tags': tags.map((e) => e.toJson()).toList(),
         'target': target,
         'quantity': _bigIntToString(quantity),
-        'data': base64UrlEncode(data),
+        'data': data,
         'data_size': dataSize,
         'data_root': dataRoot,
         'reward': _bigIntToString(reward),

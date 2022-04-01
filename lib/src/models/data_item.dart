@@ -16,8 +16,8 @@ final MIN_BINARY_SIZE = 1044;
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
 @JsonSerializable(explicitToJson: true)
 class DataItem implements TransactionBase {
-  @JsonKey(defaultValue: 1)
-  final int format = 1;
+  @JsonKey(defaultValue: 2)
+  final int format = 2;
 
   @override
   String get id => _id;
@@ -316,7 +316,7 @@ class DataItem implements TransactionBase {
         'owner': owner,
         'tags': tags.map((e) => e.toJson()).toList(),
         'target': target,
-        'data': base64UrlEncode(data),
+        'data': data,
         'data_size': dataSize,
       };
 }

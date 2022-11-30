@@ -2,16 +2,23 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:arweave/src/utils/bundle_tag_parser.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 import '../crypto/crypto.dart';
 import '../utils.dart';
 import 'models.dart';
 
+part 'data_item.g.dart';
+
 final MIN_BINARY_SIZE = 1044;
 
 /// ANS-104 [DataItem]
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
+@JsonSerializable(explicitToJson: true)
 class DataItem implements TransactionBase {
+  @JsonKey(defaultValue: 2)
+  final int format = 2;
+
   @override
   String get id => _id;
   late String _id;
@@ -34,28 +41,48 @@ class DataItem implements TransactionBase {
   @override
   late Uint8List data;
 
+  @JsonKey(name: 'data_size')
+  String get dataSize => _dataSize;
+  String _dataSize = '0';
+
   @override
   String get signature => _signature;
   late String _signature;
+
+  @JsonKey(ignore: true)
   late ByteBuffer binary;
 
   /// This constructor is reserved for JSON serialisation.
   ///
   /// [DataItem.withJsonData()] and [DataItem.withBlobData()] are the recommended ways to construct data items.
   DataItem({
+    String? id,
+    String? signature,
     String? owner,
     String? target,
     String? nonce,
     List<Tag>? tags,
     String? data,
     Uint8List? dataBytes,
+    String? dataSize,
   })  : target = target ?? '',
         nonce = nonce ?? '',
         _owner = owner ?? '',
         data = data != null
             ? decodeBase64ToBytes(data)
             : (dataBytes ?? Uint8List(0)),
-        _tags = tags ?? [];
+        _tags = tags ?? [] {
+    if (dataSize != null) {
+      _dataSize = dataSize;
+    }
+    if (signature != null) {
+      _signature = signature;
+    }
+
+    if (id != null) {
+      _id = id;
+    }
+  }
 
   /// Constructs a [DataItem] with the specified JSON data and appropriate Content-Type tag.
   factory DataItem.withJsonData({
@@ -87,10 +114,20 @@ class DataItem implements TransactionBase {
         nonce: nonce,
         tags: tags,
         dataBytes: data,
+        dataSize: data.lengthInBytes.toString(),
       );
 
   @override
   void setOwner(String owner) => _owner = owner;
+
+  @override
+  void setId(String id) => _id = id;
+
+  @override
+  void setSignature(String signature) => _signature = signature;
+
+  @override
+  void setTags(List<Tag> tags) => _tags = tags;
 
   @override
   void addTag(String name, String value) {
@@ -106,7 +143,7 @@ class DataItem implements TransactionBase {
   Future<Uint8List> getSignatureData() => deepHash(
         [
           utf8.encode('dataitem'),
-          utf8.encode('1'), //Transaction format
+          utf8.encode(format.toString()), //Transaction format
           utf8.encode('1'), //Signature type
           decodeBase64ToBytes(owner),
           decodeBase64ToBytes(target),
@@ -118,15 +155,12 @@ class DataItem implements TransactionBase {
 
   /// Signs the [DataItem] using the specified wallet and sets the `id` and `signature` appropriately.
   @override
-  Future<Uint8List> sign(Wallet wallet) async {
-    final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+  Future<void> sign(Wallet wallet) async {
+    final signedTransaction = await wallet.sign(this);
 
-    _signature = encodeBytesToBase64(rawSignature);
-
-    final idHash = await sha256.hash(rawSignature);
-    _id = encodeBytesToBase64(idHash.bytes);
-    return Uint8List.fromList(idHash.bytes);
+    setId(signedTransaction.id);
+    setSignature(signedTransaction.signature!);
+    setTags(signedTransaction.tags);
   }
 
   int getSize() {
@@ -287,4 +321,21 @@ class DataItem implements TransactionBase {
     bytesBuilder.add(data);
     return bytesBuilder;
   }
+
+  /// Encodes the [DataItem] as JSON with the `data` as the original unencoded [Uint8List].
+  @override
+  Map<String, dynamic> toJson() => _$DataItemToJson(this);
+
+  factory DataItem.fromJson(Map<String, dynamic> json) =>
+      _$DataItemFromJson(json);
+
+  @override
+  Map<String, dynamic> toUnsignedJson() => <String, dynamic>{
+        'format': format,
+        'owner': owner,
+        'tags': tags.map((e) => e.toJson()).toList(),
+        'target': target,
+        'data': data,
+        'data_size': dataSize,
+      };
 }

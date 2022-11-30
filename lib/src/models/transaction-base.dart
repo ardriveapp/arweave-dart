@@ -19,6 +19,12 @@ abstract class TransactionBase {
 
   void setOwner(String owner);
 
+  void setId(String id);
+
+  void setSignature(String signature);
+
+  void setTags(List<Tag> tags);
+
   void addTag(String name, String value);
 
   /// Returns the message that should be signed to produce a valid signature.
@@ -27,4 +33,7 @@ abstract class TransactionBase {
   Future<void> sign(Wallet wallet);
 
   Future<bool> verify();
+
+  Map<String, dynamic> toJson();
+  Map<String, dynamic> toUnsignedJson();
 }

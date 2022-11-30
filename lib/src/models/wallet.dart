@@ -3,6 +3,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:jwk/jwk.dart';
 import 'package:pointycastle/export.dart';
@@ -54,7 +55,19 @@ class Wallet {
       await _keyPair!.extractPublicKey().then((res) => res.n));
   Future<String> getAddress() async => ownerToAddress(await getOwner());
 
-  Future<Uint8List> sign(Uint8List message) async =>
+  Future<TransactionBase> sign(TransactionBase transaction) async {
+    final rawSignature = await rsaPssSign(
+        message: await transaction.getSignatureData(), keyPair: _keyPair!);
+    final signature = encodeBytesToBase64(rawSignature);
+
+    final idHash = await sha256.hash(rawSignature);
+    final id = encodeBytesToBase64(idHash.bytes);
+    return transaction
+      ..setId(id)
+      ..setSignature(signature);
+  }
+
+  Future<Uint8List> signMessage(Uint8List message) async =>
       rsaPssSign(message: message, keyPair: _keyPair!);
 
   factory Wallet.fromJwk(Map<String, dynamic> jwk) {

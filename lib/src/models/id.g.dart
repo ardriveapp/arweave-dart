@@ -6,14 +6,12 @@ part of 'id.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ArweaveId _$ArweaveIdFromJson(Map<String, dynamic> json) {
-  return ArweaveId(
-    name: json['name'] as String,
-    url: json['url'] as String,
-    text: json['text'] as String,
-    avatarDataUri: json['avatarDataUri'] as String,
-  );
-}
+ArweaveId _$ArweaveIdFromJson(Map<String, dynamic> json) => ArweaveId(
+      name: json['name'] as String,
+      url: json['url'] as String,
+      text: json['text'] as String,
+      avatarDataUri: json['avatarDataUri'] as String,
+    );
 
 Map<String, dynamic> _$ArweaveIdToJson(ArweaveId instance) => <String, dynamic>{
       'name': instance.name,

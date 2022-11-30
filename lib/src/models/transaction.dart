@@ -12,9 +12,9 @@ part 'transaction.g.dart';
 String _bigIntToString(BigInt v) => v.toString();
 BigInt _stringToBigInt(String v) => BigInt.parse(v);
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class Transaction implements TransactionBase {
-  @JsonKey(defaultValue: 1)
+  @JsonKey(defaultValue: 2)
   final int format;
 
   @override
@@ -174,6 +174,15 @@ class Transaction implements TransactionBase {
   @override
   void setOwner(String owner) => _owner = owner;
 
+  @override
+  void setId(String id) => _id = id;
+
+  @override
+  void setSignature(String signature) => _signature = signature;
+
+  @override
+  void setTags(List<Tag> tags) => _tags = tags;
+
   /// Sets the data and data size of this [Transaction].
   ///
   /// Also chunks and validates the incoming data for format 2 transactions.
@@ -277,13 +286,11 @@ class Transaction implements TransactionBase {
 
   @override
   Future<void> sign(Wallet wallet) async {
-    final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+    final signedTransaction = await wallet.sign(this);
 
-    _signature = encodeBytesToBase64(rawSignature);
-
-    final idHash = await sha256.hash(rawSignature);
-    _id = encodeBytesToBase64(idHash.bytes);
+    setId(signedTransaction.id);
+    setSignature(signedTransaction.signature!);
+    setTags(signedTransaction.tags);
   }
 
   @override
@@ -312,5 +319,20 @@ class Transaction implements TransactionBase {
       _$TransactionFromJson(json);
 
   /// Encodes the [Transaction] as JSON with the `data` as the original unencoded [Uint8List].
+  @override
   Map<String, dynamic> toJson() => _$TransactionToJson(this);
+
+  @override
+  Map<String, dynamic> toUnsignedJson() => <String, dynamic>{
+        'format': format,
+        'last_tx': lastTx,
+        'owner': owner,
+        'tags': tags.map((e) => e.toJson()).toList(),
+        'target': target,
+        'quantity': _bigIntToString(quantity),
+        'data': data,
+        'data_size': dataSize,
+        'data_root': dataRoot,
+        'reward': _bigIntToString(reward),
+      };
 }

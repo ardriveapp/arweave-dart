@@ -4,11 +4,12 @@ import 'package:cryptography/cryptography.dart';
 
 import '../../utils.dart';
 import '../crypto.dart';
-import 'rsa-pss-common.dart' as common;
+import 'rsa_pss_common.dart' as common;
 
 final rsaPss = RsaPss(sha256, nonceLengthInBytes: 0);
 
-Future<Uint8List> rsaPssSign({required Uint8List message, required RsaKeyPair keyPair}) async {
+Future<Uint8List> rsaPssSign(
+    {required Uint8List message, required RsaKeyPair keyPair}) async {
   try {
     final signature = await rsaPss.sign(message, keyPair: keyPair);
     return Uint8List.fromList(signature.bytes);

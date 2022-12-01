@@ -2,13 +2,13 @@
 
 import 'dart:typed_data';
 
-import 'package:arweave/src/utils/bundle_tag_parser.dart';
 import 'package:arweave/src/models/tag.dart';
+import 'package:arweave/src/utils/bundle_tag_parser.dart';
 import 'package:arweave/utils.dart';
 import 'package:test/test.dart';
 
-import 'snapshots/data_bundle_test_snaphot.dart';
 import 'deserialize_tags.dart';
+import 'snapshots/data_bundle_test_snaphot.dart';
 
 void main() {
   group('serializeTags function', () {

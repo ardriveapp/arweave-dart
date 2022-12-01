@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:arweave/src/models/models.dart';
@@ -12,13 +11,13 @@ class ArweaveChunksApi {
   ArweaveChunksApi(ArweaveApi api) : _api = api;
 
   Future<TransactionOffsetResponse> getTransactionOffset(String id) async {
-    final res = await _api.get('tx/$id/offset');
-    return TransactionOffsetResponse.fromJson(json.decode(res.body));
+    final res = await _api.getJson('tx/$id/offset');
+    return TransactionOffsetResponse.fromJson(res.data);
   }
 
   Future<TransactionChunkResponse> getChunk(int offset) async {
-    final res = await _api.get('chunk/$offset');
-    return TransactionChunkResponse.fromJson(json.decode(res.body));
+    final res = await _api.getJson('chunk/$offset');
+    return TransactionChunkResponse.fromJson(res.data);
   }
 
   Future<Uint8List> getChunkData(int offset) async {

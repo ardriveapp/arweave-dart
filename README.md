@@ -3,7 +3,7 @@
 ![tests](https://github.com/CDDelta/arweave-dart/workflows/tests/badge.svg)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/CDDelta/arweave-dart/issues)
 
-Dart package for interfacing with the Arweave network, modelled after [arweave-js](https://github.com/ArweaveTeam/arweave-js).
+Dart/Flutter package for interfacing with the Arweave network, modelled after [arweave-js](https://github.com/ArweaveTeam/arweave-js).
 
 ## Installation
 
@@ -127,7 +127,7 @@ import 'package:arweave/utils.dart' as utils;
 To rebuild the generated code (eg. for JSON serialisation) run:
 
 ```shell
-dart pub run build_runner build
+flutter pub run build_runner build
 ```
 
 ### Testing
@@ -135,5 +135,5 @@ dart pub run build_runner build
 To test, run the following command
 
 ```shell
-dart test -p "chrome,vm"
+flutter test
 ```

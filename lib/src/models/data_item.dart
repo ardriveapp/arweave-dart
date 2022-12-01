@@ -7,7 +7,7 @@ import '../crypto/crypto.dart';
 import '../utils.dart';
 import 'models.dart';
 
-final MIN_BINARY_SIZE = 1044;
+const MIN_BINARY_SIZE = 1044;
 
 /// ANS-104 [DataItem]
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md

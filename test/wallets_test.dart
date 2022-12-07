@@ -70,5 +70,16 @@ void main() {
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
     });
+
+    test('generate a wallet from mnemonics', () async {
+      const String mnemonics =
+          'auto rail cake deer build analyst engage boat provide call jelly provide';
+
+      Uint8List seed = Wallet().generateSeedFromMnemonics(mnemonics);
+
+      var wallet = await Wallet.generate(seed: seed);
+      expect(await wallet.getAddress(),
+          'FysA8jWFZQSaWbljL83Tl_fgJptHUDFPQGGEjwvVKQI');
+    });
   });
 }

@@ -3,6 +3,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:bip39/bip39.dart' as bip39;
 import 'package:cryptography/cryptography.dart';
 import 'package:jwk/jwk.dart';
 import 'package:pointycastle/export.dart';
@@ -14,14 +15,19 @@ class Wallet {
   RsaKeyPair? _keyPair;
   Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
-  static Future<Wallet> generate() async {
+  static Future<Wallet> generate({Uint8List? seed}) async {
     final secureRandom = FortunaRandom();
-    final seedSource = Random.secure();
-    final seeds = <int>[];
-    for (var i = 0; i < 32; i++) {
-      seeds.add(seedSource.nextInt(255));
+
+    if (seed != null && seed.length == 32) {
+      secureRandom.seed(KeyParameter(seed));
+    } else {
+      final seedSource = Random.secure();
+      final seeds = <int>[];
+      for (var i = 0; i < 32; i++) {
+        seeds.add(seedSource.nextInt(255));
+      }
+      secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
     }
-    secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
 
     final keyGen = RSAKeyGenerator()
       ..init(
@@ -49,6 +55,11 @@ class Wallet {
       ),
     );
   }
+
+  String generateMnemonics() => bip39.generateMnemonic();
+
+  Uint8List generateSeedFromMnemonics(String mnemonics) =>
+      bip39.mnemonicToSeed(mnemonics);
 
   Future<String> getOwner() async => encodeBytesToBase64(
       await _keyPair!.extractPublicKey().then((res) => res.n));

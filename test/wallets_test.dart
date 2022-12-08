@@ -71,6 +71,12 @@ void main() {
       'browser': Skip('dart:io unavailable'),
     });
 
+    test('generates a mnemonic with the expected word count', () async {
+      String mnemonic = Wallet().generateMnemonics();
+
+      expect(mnemonic.split(" ").length, 12);
+    });
+
     test('generate a wallet from mnemonics', () async {
       const String mnemonics =
           'shrimp pony traffic photo favorite plastic fancy gadget february surge surface innocent';

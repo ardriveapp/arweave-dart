@@ -3,8 +3,10 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:arweave/src/utils/hmac_drbg.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:cryptography/cryptography.dart';
+import 'package:hash/hash.dart';
 import 'package:jwk/jwk.dart';
 import 'package:pointycastle/export.dart';
 
@@ -16,11 +18,12 @@ class Wallet {
   Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
   static Future<Wallet> generate({Uint8List? seed}) async {
-    final secureRandom = FortunaRandom();
+    SecureRandom secureRandom;
 
-    if (seed != null && seed.length == 32) {
-      secureRandom.seed(KeyParameter(seed));
+    if (seed != null) {
+      secureRandom = HmacDRBG(entropy: seed, hash: SHA256());
     } else {
+      secureRandom = FortunaRandom();
       final seedSource = Random.secure();
       final seeds = <int>[];
       for (var i = 0; i < 32; i++) {

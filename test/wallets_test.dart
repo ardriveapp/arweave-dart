@@ -73,13 +73,15 @@ void main() {
 
     test('generate a wallet from mnemonics', () async {
       const String mnemonics =
-          'auto rail cake deer build analyst engage boat provide call jelly provide';
+          'shrimp pony traffic photo favorite plastic fancy gadget february surge surface innocent';
 
       Uint8List seed = Wallet().generateSeedFromMnemonics(mnemonics);
 
       var wallet = await Wallet.generate(seed: seed);
-      expect(await wallet.getAddress(),
-          'FysA8jWFZQSaWbljL83Tl_fgJptHUDFPQGGEjwvVKQI');
+      expect(
+        await wallet.getAddress(),
+        '0nYC9uPt61tUhVKH_rqbGLmfA5zPP1Vv263nDSyxzds',
+      );
     });
   });
 }

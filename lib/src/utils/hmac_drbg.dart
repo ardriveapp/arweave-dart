@@ -3,8 +3,40 @@ library hmac_drgb;
 import 'dart:typed_data';
 
 import 'package:hash/hash.dart' as h;
+import 'package:pointycastle/pointycastle.dart';
 
-class HmacDRBG {
+abstract class ByteBasedSecureRandom implements SecureRandom {
+  @override
+  BigInt nextBigInteger(int bitLength) {
+    int byteCount = (bitLength + 7) ~/ 8;
+    Uint8List bytes = nextBytes(byteCount);
+    String s = '';
+    for (int i = 0; i < byteCount; i++) {
+      s = s + (bytes[i].toRadixString(2).padLeft(8, '0'));
+    }
+    return BigInt.parse(s, radix: 2).toUnsigned(bitLength);
+  }
+
+  @override
+  int nextUint16() {
+    return nextBytes(2).buffer.asByteData().getUint16(0);
+  }
+
+  @override
+  int nextUint32() {
+    return nextBytes(4).buffer.asByteData().getUint32(0);
+  }
+
+  @override
+  int nextUint8() {
+    return nextBytes(1).buffer.asByteData().getUint8(0);
+  }
+
+  @override
+  void seed(CipherParameters params) {}
+}
+
+class HmacDRBG extends ByteBasedSecureRandom {
   h.BlockHash hash;
   bool? predResist;
 
@@ -77,4 +109,15 @@ class HmacDRBG {
 
     return Uint8List.fromList(res);
   }
+
+  @override
+  String get algorithmName => 'HmacDRBG';
+
+  @override
+  Uint8List nextBytes(int count) {
+    return generate(count);
+  }
+
+  @override
+  void seed(CipherParameters params) {}
 }

@@ -3,12 +3,10 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:arweave/src/utils/hmac_drbg.dart';
+import 'package:arweave/src/utils/wallet_generate.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:cryptography/cryptography.dart';
-import 'package:hash/hash.dart';
 import 'package:jwk/jwk.dart';
-import 'package:pointycastle/export.dart';
 
 import '../crypto/crypto.dart';
 import '../utils.dart';
@@ -17,46 +15,9 @@ class Wallet {
   RsaKeyPair? _keyPair;
   Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
-  static Future<Wallet> generate({Uint8List? seed}) async {
-    SecureRandom secureRandom;
-
-    if (seed != null) {
-      secureRandom = HmacDRBG(entropy: seed, hash: SHA256());
-    } else {
-      secureRandom = FortunaRandom();
-      final seedSource = Random.secure();
-      final seeds = <int>[];
-      for (var i = 0; i < 32; i++) {
-        seeds.add(seedSource.nextInt(255));
-      }
-      secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
-    }
-
-    final keyGen = RSAKeyGenerator()
-      ..init(
-        ParametersWithRandom(
-          RSAKeyGeneratorParameters(
-            publicExponent,
-            keyLength,
-            64,
-          ),
-          secureRandom,
-        ),
-      );
-
-    final pair = keyGen.generateKeyPair();
-
-    final privK = pair.privateKey as RSAPrivateKey;
-
-    return Wallet(
-      keyPair: RsaKeyPairData(
-        e: encodeBigIntToBytes(privK.publicExponent!),
-        n: encodeBigIntToBytes(privK.modulus!),
-        d: encodeBigIntToBytes(privK.privateExponent!),
-        p: encodeBigIntToBytes(privK.p!),
-        q: encodeBigIntToBytes(privK.q!),
-      ),
-    );
+  static Future<Wallet> generate({String? seed}) async {
+    return generateWallet(
+        seed: seed ?? Random.secure().nextInt(999999).toString());
   }
 
   String generateMnemonics() => bip39.generateMnemonic();

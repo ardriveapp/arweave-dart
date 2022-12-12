@@ -75,9 +75,7 @@ void main() {
       const String mnemonics =
           'shrimp pony traffic photo favorite plastic fancy gadget february surge surface innocent';
 
-      Uint8List seed = Wallet().generateSeedFromMnemonics(mnemonics);
-
-      var wallet = await Wallet.generate(seed: seed);
+      var wallet = await Wallet.generate(seed: mnemonics);
       expect(
         await wallet.getAddress(),
         '0nYC9uPt61tUhVKH_rqbGLmfA5zPP1Vv263nDSyxzds',

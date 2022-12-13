@@ -5,12 +5,13 @@ import 'dart:convert';
 
 import 'package:arweave/arweave.dart';
 import 'package:js/js.dart';
+import 'package:js/js_util.dart';
 
 @JS()
-external String generateWalletFromSeedphrase(String mnemonic);
+external dynamic generateWalletFromSeedphrase(String mnemonic);
 
-Wallet generateWallet({required String mnemonic}) {
-  final wallet = generateWalletFromSeedphrase(mnemonic);
+Future<Wallet> generateWallet({required String mnemonic}) async {
+  final wallet = await promiseToFuture(generateWalletFromSeedphrase(mnemonic));
   print(wallet);
   return Wallet.fromJwk(json.decode(wallet));
 }

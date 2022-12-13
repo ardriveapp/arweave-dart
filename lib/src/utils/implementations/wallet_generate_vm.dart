@@ -1,8 +1,7 @@
-import 'dart:typed_data';
-
 import 'package:arweave/arweave.dart';
 import 'package:arweave/src/utils/hmac_drbg.dart';
 import 'package:arweave/utils.dart';
+import 'package:bip39/bip39.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:hash/hash.dart';
 import 'package:pointycastle/export.dart';
@@ -10,8 +9,7 @@ import 'package:pointycastle/export.dart';
 Wallet generateWallet(String seed) {
   SecureRandom secureRandom;
 
-  secureRandom =
-      HmacDRBG(entropy: Uint8List.fromList(seed.codeUnits), hash: SHA256());
+  secureRandom = HmacDRBG(entropy: mnemonicToSeed(seed), hash: SHA256());
 
   final keyGen = RSAKeyGenerator()
     ..init(

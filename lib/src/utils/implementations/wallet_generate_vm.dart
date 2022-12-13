@@ -6,7 +6,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:hash/hash.dart';
 import 'package:pointycastle/export.dart';
 
-Wallet generateWallet({required String mnemonic}) {
+Future<Wallet> generateWallet({required String mnemonic}) async {
   SecureRandom secureRandom;
 
   secureRandom = HmacDRBG(entropy: mnemonicToSeed(mnemonic), hash: SHA256());

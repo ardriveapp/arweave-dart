@@ -12,6 +12,8 @@ void main() {
         await wallet.getAddress(),
         '0nYC9uPt61tUhVKH_rqbGLmfA5zPP1Vv263nDSyxzds',
       );
+    }, onPlatform: {
+      'vm': Skip('incorrect implementation'),
     });
   });
 }

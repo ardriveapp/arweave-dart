@@ -6,10 +6,10 @@ import 'package:cryptography/cryptography.dart';
 import 'package:hash/hash.dart';
 import 'package:pointycastle/export.dart';
 
-Wallet generateWallet({required String seed}) {
+Wallet generateWallet({required String mnemonic}) {
   SecureRandom secureRandom;
 
-  secureRandom = HmacDRBG(entropy: mnemonicToSeed(seed), hash: SHA256());
+  secureRandom = HmacDRBG(entropy: mnemonicToSeed(mnemonic), hash: SHA256());
 
   final keyGen = RSAKeyGenerator()
     ..init(

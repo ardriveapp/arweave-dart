@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:core';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:arweave/src/utils/wallet_generate.dart';
@@ -15,9 +14,10 @@ class Wallet {
   RsaKeyPair? _keyPair;
   Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
-  static Future<Wallet> generate({String? seed}) async {
+  static Future<Wallet> generate({String? mnemonic}) async {
     return generateWallet(
-        seed: seed ?? Random.secure().nextInt(999999).toString());
+      mnemonic: mnemonic ?? bip39.generateMnemonic(),
+    );
   }
 
   String generateMnemonics() => bip39.generateMnemonic();

@@ -6,7 +6,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:hash/hash.dart';
 import 'package:pointycastle/export.dart';
 
-Wallet generateWallet(String seed) {
+Wallet generateWallet({required String seed}) {
   SecureRandom secureRandom;
 
   secureRandom = HmacDRBG(entropy: mnemonicToSeed(seed), hash: SHA256());

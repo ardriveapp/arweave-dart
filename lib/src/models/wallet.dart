@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:core';
-import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:cryptography/cryptography.dart';
+import 'package:arweave/src/crypto/hmac_drbg_secure_random.dart';
+import 'package:bip39/bip39.dart' as bip39;
+import 'package:cryptography/cryptography.dart' hide SecureRandom;
 import 'package:jwk/jwk.dart';
 import 'package:pointycastle/export.dart';
+import 'package:pointycastle/src/platform_check/platform_check.dart';
 
 import '../crypto/crypto.dart';
 import '../utils.dart';
@@ -14,15 +16,7 @@ class Wallet {
   RsaKeyPair? _keyPair;
   Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
-  static Future<Wallet> generate() async {
-    final secureRandom = FortunaRandom();
-    final seedSource = Random.secure();
-    final seeds = <int>[];
-    for (var i = 0; i < 32; i++) {
-      seeds.add(seedSource.nextInt(255));
-    }
-    secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
-
+  static Wallet generateWallet(SecureRandom secureRandom) {
     final keyGen = RSAKeyGenerator()
       ..init(
         ParametersWithRandom(
@@ -48,6 +42,22 @@ class Wallet {
         q: encodeBigIntToBytes(privK.q!),
       ),
     );
+  }
+
+  static Future<Wallet> generate() async {
+    final FortunaRandom secureRandom = FortunaRandom()
+      ..seed(
+          KeyParameter(Platform.instance.platformEntropySource().getBytes(32)));
+
+    return generateWallet(secureRandom);
+  }
+
+  static Future<Wallet> createWalletFromMnemonic(String mnemonic) async {
+    final seed = bip39.mnemonicToSeed(mnemonic);
+    final secureRandom = HmacDrbgSecureRandom();
+    secureRandom.seed(KeyParameter(seed));
+
+    return generateWallet(secureRandom);
   }
 
   Future<String> getOwner() async => encodeBytesToBase64(

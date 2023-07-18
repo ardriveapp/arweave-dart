@@ -6,7 +6,11 @@ import 'package:arweave/arweave.dart';
 import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
+import 'fixtures/test_wallet.dart' as testWallet;
 import 'utils.dart';
+
+final testArweaveAppWalletMnemonic =
+    "child collect expose tunnel youth response idle suspect accuse drink clip athlete";
 
 void main() {
   group('wallets:', () {
@@ -69,6 +73,27 @@ void main() {
       );
     }, onPlatform: {
       'browser': Skip('dart:io unavailable'),
+    });
+
+    test('create wallet from mnemonic matches Arweave.app test wallet',
+        () async {
+      final wallet =
+          await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
+      final arweaveAppTestWallet = await testWallet.getTestArweaveAppWallet();
+
+      expect(await wallet.getAddress(),
+          equals(await arweaveAppTestWallet.getAddress()));
+    });
+
+    test('regenerating wallet from mnemonic creates matching wallets',
+        () async {
+      final wallet =
+          await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
+
+      final wallet2 =
+          await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
+
+      expect(await wallet.getAddress(), equals(await wallet2.getAddress()));
     });
   });
 }

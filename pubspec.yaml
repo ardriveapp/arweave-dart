@@ -17,6 +17,8 @@ dependencies:
   base32: ^2.1.1
   async: ^2.9.0
   mutex: ^3.0.1
+  bip39: ^1.0.6
+  hash: ^1.0.4
 
 dev_dependencies:
   build_runner: ^2.0.4

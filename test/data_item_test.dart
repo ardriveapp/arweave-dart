@@ -1,13 +1,11 @@
-// @TestOn('browser')
-
 import 'dart:convert';
 
 import 'package:arweave/arweave.dart';
 import 'package:arweave/src/streams/data_item.dart';
 import 'package:arweave/utils.dart';
 import 'package:test/test.dart';
-import 'deserialize_tags.dart';
 import 'fixtures/test_wallet.dart';
+import 'deserialize_tags.dart' if (dart.library.io) 'deserialize_tags_io.dart';
 
 void main() async {
   final wallet = getTestWallet();

@@ -1,4 +1,5 @@
 @TestOn('browser')
+@Timeout(Duration(minutes: 2))
 
 import 'dart:convert';
 import 'dart:typed_data';

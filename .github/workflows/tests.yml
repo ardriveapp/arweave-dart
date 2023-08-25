@@ -20,7 +20,10 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
+      - uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest
       - name: Install dependencies
         run: dart pub get
       - name: Run tests
-        run: dart run test -p vm,chrome
+        run: dart run test -p vm,chrome,firefox

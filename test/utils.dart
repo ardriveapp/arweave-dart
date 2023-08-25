@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
-import 'package:arweave/src/models/transaction_stream.dart';
 
 final digestPattern = RegExp(r'^[a-z0-9-_]{43}$', caseSensitive: false);
 
@@ -44,10 +43,11 @@ class StreamMeta {
 
 Future<StreamMeta> getFileStreamMeta(String filePath) async {
   final file = File(filePath);
-  Stream<Uint8List> dataStreamGenerator ([int? start, int? end]) {
+  Stream<Uint8List> dataStreamGenerator([int? start, int? end]) {
     final fileStream = file.openRead(start, end);
     return fileStream.asyncMap((chunk) => (chunk as Uint8List));
   }
+
   final dataSize = await file.length();
 
   return StreamMeta(dataStreamGenerator, dataSize);

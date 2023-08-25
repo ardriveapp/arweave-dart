@@ -6,7 +6,7 @@ import 'package:arweave/arweave.dart';
 import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
-import 'fixtures/test_wallet.dart' as testWallet;
+import 'fixtures/test_wallet.dart' as test_wallet;
 import 'utils.dart';
 
 final testArweaveAppWalletMnemonic =
@@ -52,6 +52,8 @@ void main() {
 
       expect(await walletA.getAddress(),
           isNot(equals(await walletB.getAddress())));
+    }, onPlatform: {
+      'browser': Skip('TODO: implement this test for browser'),
     });
 
     test('resolve address from wallet', () async {
@@ -79,10 +81,12 @@ void main() {
         () async {
       final wallet =
           await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
-      final arweaveAppTestWallet = await testWallet.getTestArweaveAppWallet();
+      final arweaveAppTestWallet = test_wallet.getTestArweaveAppWallet();
 
       expect(await wallet.getAddress(),
           equals(await arweaveAppTestWallet.getAddress()));
+    }, onPlatform: {
+      'browser': Skip('TODO: implement this test for browser'),
     });
 
     test('regenerating wallet from mnemonic creates matching wallets',
@@ -94,6 +98,8 @@ void main() {
           await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
 
       expect(await wallet.getAddress(), equals(await wallet2.getAddress()));
+    }, onPlatform: {
+      'browser': Skip('TODO: implement this test for browser'),
     });
   });
 }

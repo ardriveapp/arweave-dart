@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:arweave/src/models/transaction_stream.dart';
-
 import 'api/api.dart';
 import 'models/models.dart';
 

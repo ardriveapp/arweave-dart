@@ -26,6 +26,13 @@ BigInt decodeBytesToBigInt(List<int> bytes) {
   return result;
 }
 
+String decodeStringFromBase64(String base64String) {
+  var paddingLength = 4 - base64String.length % 4;
+  var paddedBase64String =
+      paddingLength != 4 ? base64String + ('=' * paddingLength) : base64String;
+  return utf8.decode(base64Url.decode(paddedBase64String));
+}
+
 String encodeStringToBase64(String string) =>
     encodeBytesToBase64(utf8.encode(string));
 

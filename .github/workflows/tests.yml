@@ -8,14 +8,19 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    container:
-      image: dart:stable
-
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.0.6
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
       - name: Install dependencies
         run: dart pub get
       - name: Run tests
-        run: dart run test
+        run: dart run test -p vm,chrome

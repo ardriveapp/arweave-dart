@@ -1,8 +1,9 @@
 import 'dart:convert';
 
-import 'package:arweave/arweave.dart';
+import 'package:arweave/arweave.dart' hide DataStreamGenerator;
 import 'package:arweave/src/streams/data_item.dart';
 import 'package:arweave/utils.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
 import 'fixtures/test_wallet.dart';
 import 'deserialize_tags.dart' if (dart.library.io) 'deserialize_tags_io.dart';
@@ -11,9 +12,11 @@ void main() async {
   final wallet = getTestWallet();
   final walletOwner = await wallet.getOwner();
 
-  final data = utf8.encode('Hello World!');
+  final dataText = 'Hello World!';
 
-  Future<Stream<List<int>>> dataStreamGenerator() async {
+  final data = utf8.encode(dataText);
+
+  Stream<List<int>> dataStreamGenerator() {
     return Stream.fromIterable([data]);
   }
 
@@ -30,59 +33,184 @@ void main() async {
 
   const expectedDataItemId = 'PKvhRDCiv_gpusxagkfTdjWJrp1RazFuxl04E6FUQqs';
   const expectedDataItemSize = 1104;
-  late String dataItemId;
-  late int dataItemSize;
-  late Future<Stream<List<int>>> Function() dataItemDataGenerator;
-  late ProcessedDataItem processedDataItem;
-
-  Future<(String, int, Future<Stream<List<int>>> Function())>
-      dataItemGenerator() async => await createDataItem(
-            wallet: wallet,
-            tags: tags,
-            dataStreamGenerator: dataStreamGenerator,
-            dataSize: data.length,
-          );
 
   group('[streams][data_item]', () {
     test('create and sign data item', () async {
-      final dataItem = await dataItemGenerator();
-      dataItemId = dataItem.$1;
-      dataItemSize = dataItem.$2;
-      dataItemDataGenerator = dataItem.$3;
-      final dataItemStream = await dataItemDataGenerator();
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
 
-      expect(dataItemId, expectedDataItemId);
-      expect(dataItemSize, expectedDataItemSize);
-      expect(dataItemDataGenerator, isA<Function>());
-      expect(dataItemStream, isA<Stream<List<int>>>());
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Right>());
+
+      dataItemTask.match((error) {
+        expect(error, None());
+      }, (dataItem) {
+        expect(dataItem.id, expectedDataItemId);
+        expect(dataItem.size, expectedDataItemSize);
+        expect(dataItem.stream, isA<DataStreamGenerator>());
+
+        final dataStream = dataItem.stream();
+
+        expect(dataStream, emitsThrough(data));
+      });
+    });
+
+    test('return anchor size error when creating dataitem', () async {
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        anchor: expectedDataItemId + '1',
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
+
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Left>());
+
+      dataItemTask.match((error) {
+        expect(error, isA<InvalidAnchorSizeError>());
+      }, (dataItem) {
+        expect(dataItem, None());
+      });
+    });
+
+    test(
+        'return DecodeBase64ToBytesError if anchor is not base64 when creating dataitem',
+        () async {
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        anchor: expectedDataItemId + '%',
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
+
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Left>());
+
+      dataItemTask.match((error) {
+        expect(error, isA<DecodeBase64ToBytesError>());
+      }, (dataItem) {
+        expect(dataItem, None());
+      });
+    });
+
+    test('return target size error when creating dataitem', () async {
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        target: expectedDataItemId + '1',
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
+
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Left>());
+
+      dataItemTask.match((error) {
+        expect(error, isA<InvalidTargetSizeError>());
+      }, (dataItem) {
+        expect(dataItem, None());
+      });
+    });
+
+    test(
+        'return DecodeBase64ToBytesError if target is not base64 when creating dataitem',
+        () async {
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        target: expectedDataItemId + '%',
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
+
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Left>());
+
+      dataItemTask.match((error) {
+        expect(error, isA<DecodeBase64ToBytesError>());
+      }, (dataItem) {
+        expect(dataItem, None());
+      });
     });
 
     test('process data item', () async {
-      final dataItem = await dataItemGenerator();
-      final id = dataItem.$1;
-      final dataItemSize = dataItem.$2;
-      final dataItemDataGenerator = dataItem.$3;
-      final dataItemStream = await dataItemDataGenerator();
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
 
-      processedDataItem = (await processDataItem(
-        stream: dataItemStream,
-        id: id,
-        length: dataItemSize,
-      ));
+      final dataItemTask = await dataItemTaskEither.run();
 
-      expect(processedDataItem.id, expectedDataItemId);
-      expect(processedDataItem.owner, walletOwner);
-      expect(processedDataItem.target, '');
-      expect(processedDataItem.anchor, '');
-      expect(processedDataItem.dataLength, data.length);
+      expect(dataItemTask, isA<Right>());
+
+      await dataItemTask.match((error) {
+        expect(error, None());
+      }, (dataItem) async {
+        final processedDataItem = await processDataItem(
+          dataItemStreamGenerator: dataItem.stream,
+          id: dataItem.id,
+          length: dataItem.size,
+        );
+
+        expect(processedDataItem.id, expectedDataItemId);
+        expect(processedDataItem.owner, walletOwner);
+        expect(processedDataItem.target, '');
+        expect(processedDataItem.anchor, '');
+        expect(processedDataItem.dataLength, data.length);
+
+        final dataStream = processedDataItem.dataStreamGenerator();
+
+        final receivedData = [];
+        await for (List<int> bytes in dataStream) {
+          receivedData.addAll(bytes);
+        }
+
+        expect(receivedData, data);
+      });
     });
-    test('verify tags', () {
-      final tags = deserializeTags(buffer: processedDataItem.tags);
-      for (var i = 0; i < tags.length; i++) {
-        final tag = tags[i];
-        print(decodeStringFromBase64(tag.name));
-        print(decodeStringFromBase64(tag.value));
-      }
+
+    test('verify tags', () async {
+      final dataItemTaskEither = createDataItemTaskEither(
+        wallet: wallet,
+        tags: tags,
+        dataStream: dataStreamGenerator,
+        dataSize: data.length,
+      );
+
+      final dataItemTask = await dataItemTaskEither.run();
+
+      expect(dataItemTask, isA<Right>());
+
+      await dataItemTask.match((error) {
+        expect(error, None());
+      }, (dataItem) async {
+        final processedDataItem = await processDataItem(
+          dataItemStreamGenerator: dataItem.stream,
+          id: dataItem.id,
+          length: dataItem.size,
+        );
+        final deserializedTags =
+            deserializeTags(buffer: processedDataItem.tags);
+
+        for (var i = 0; i < deserializedTags.length; i++) {
+          final tag = deserializedTags[i];
+          print(decodeStringFromBase64(tag.name));
+          print(decodeStringFromBase64(tag.value));
+        }
+      });
     }, onPlatform: {
       'vm': Skip('deserializeTags currently only works with js')
     });

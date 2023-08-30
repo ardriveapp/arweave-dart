@@ -1,8 +1,9 @@
 import 'dart:convert';
 
-import 'package:arweave/arweave.dart' hide DataStreamGenerator;
 import 'package:arweave/src/streams/data_item.dart';
-import 'package:arweave/utils.dart';
+import 'package:arweave/src/streams/data_models.dart';
+import 'package:arweave/src/streams/errors.dart';
+import 'package:arweave/src/streams/utils.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
 import 'fixtures/test_wallet.dart';
@@ -21,14 +22,8 @@ void main() async {
   }
 
   final tags = [
-    Tag(
-      encodeStringToBase64('First-Tag'),
-      encodeStringToBase64('First-Value'),
-    ),
-    Tag(
-      encodeStringToBase64('Second-Tag'),
-      encodeStringToBase64('Second-Value'),
-    ),
+    createTag('First-Tag', 'First-Value'),
+    createTag('Second-Tag', 'Second-Value'),
   ];
 
   const expectedDataItemId = 'PKvhRDCiv_gpusxagkfTdjWJrp1RazFuxl04E6FUQqs';
@@ -171,10 +166,10 @@ void main() async {
         expect(processedDataItem.anchor, '');
         expect(processedDataItem.dataLength, data.length);
 
-        final dataStream = processedDataItem.dataStreamGenerator();
+        final dataStream = processedDataItem.dataStreamGenerator;
 
         final receivedData = [];
-        await for (List<int> bytes in dataStream) {
+        await for (List<int> bytes in dataStream()) {
           receivedData.addAll(bytes);
         }
 
@@ -205,11 +200,14 @@ void main() async {
         final deserializedTags =
             deserializeTags(buffer: processedDataItem.tags);
 
+        final receivedTags = [];
+
         for (var i = 0; i < deserializedTags.length; i++) {
           final tag = deserializedTags[i];
-          print(decodeStringFromBase64(tag.name));
-          print(decodeStringFromBase64(tag.value));
+          receivedTags.add(tag);
         }
+
+        expect(receivedTags, tags);
       });
     }, onPlatform: {
       'vm': Skip('deserializeTags currently only works with js')

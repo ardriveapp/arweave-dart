@@ -10,7 +10,19 @@ import 'data_item.dart';
 import 'data_models.dart';
 import 'errors.dart';
 
-TaskEither<DataItemError, DataItemTaskEither> createBundledDataItemTaskEither({
+TaskEither<DataItemError, dynamic> createBundleTaskEither({
+  required final Wallet wallet,
+  required final String anchor,
+  required final String target,
+  required final List<Tag> tags,
+  required final BigInt quantity,
+  required final BigInt reward,
+}) {
+  return TaskEither.of({});
+}
+
+typedef BundledDataItemResult = TaskEither<DataItemError, DataItemResult>;
+BundledDataItemResult createBundledDataItemTaskEither({
   required final Wallet wallet,
   required DataBundleTaskEither dataBundleTaskEither,
   final String target = '',
@@ -19,22 +31,22 @@ TaskEither<DataItemError, DataItemTaskEither> createBundledDataItemTaskEither({
 }) {
   return dataBundleTaskEither.flatMap((dataBundle) {
     final dataBundleStream = dataBundle.stream;
-    final dataBundleSize = dataBundle.size;
+    final dataBundleSize = dataBundle.dataBundleStreamSize;
 
     final bundledDataItemTags = [
-      createTag('Bundle-Type', 'data'),
+      createTag('Bundle-Format', 'binary'),
       createTag('Bundle-Version', '2.0.0'),
       ...tags,
     ];
 
-    return TaskEither.of(createDataItemTaskEither(
+    return createDataItemTaskEither(
       wallet: wallet,
       dataStream: dataBundleStream,
-      dataSize: dataBundleSize,
+      dataStreamSize: dataBundleSize,
       target: target,
       anchor: anchor,
       tags: bundledDataItemTags,
-    ));
+    ).flatMap((dataItem) => TaskEither.of(dataItem));
   });
 }
 
@@ -49,7 +61,7 @@ DataBundleTaskEither createDataBundleTaskEither(
     for (var i = 0; i < dataItemsLength; i++) {
       final dataItem = dataItems[i];
       final id = decodeBase64ToBytes(dataItem.id);
-      final dataItemLength = dataItem.size;
+      final dataItemLength = dataItem.dataItemSize;
 
       dataItemsSize += dataItemLength;
 
@@ -72,10 +84,14 @@ DataBundleTaskEither createDataBundleTaskEither(
 
     final bundleGenerator = combineStreamAndFunctionList(
         Stream.fromIterable([bundleHeaders]),
-        dataItems.map((dataItem) => dataItem.stream).toList());
+        dataItems.map((dataItem) => dataItem.streamGenerator).toList());
+
+    print('bundleHeaders size: ${bundleHeaders.length}');
+    print('dataItemsSize: $dataItemsSize');
 
     return TaskEither.of(DataBundleResult(
-      size: bundleHeaders.length + dataItemsSize,
+      dataBundleStreamSize: bundleHeaders.length + dataItemsSize,
+      dataItemsSize: dataItemsSize,
       stream: bundleGenerator,
     ));
   });

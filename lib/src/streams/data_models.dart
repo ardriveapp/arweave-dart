@@ -19,13 +19,15 @@ typedef DataItemTaskEither = TaskEither<DataItemError, DataItemResult>;
 
 class DataItemResult {
   final String id;
-  final int size;
-  final DataStreamGenerator stream;
+  final int dataItemSize;
+  final int dataSize;
+  final DataStreamGenerator streamGenerator;
 
   const DataItemResult({
     required this.id,
-    required this.size,
-    required this.stream,
+    required this.dataItemSize,
+    required this.dataSize,
+    required this.streamGenerator,
   });
 }
 
@@ -54,11 +56,13 @@ class ProcessedDataItem {
 typedef DataBundleTaskEither = TaskEither<DataItemError, DataBundleResult>;
 
 class DataBundleResult {
-  final int size;
+  final int dataBundleStreamSize;
+  final int dataItemsSize;
   final DataStreamGenerator stream;
 
   const DataBundleResult({
-    required this.size,
+    required this.dataBundleStreamSize,
+    required this.dataItemsSize,
     required this.stream,
   });
 }

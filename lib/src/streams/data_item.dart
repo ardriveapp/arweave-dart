@@ -15,7 +15,7 @@ import 'utils.dart';
 DataItemTaskEither createDataItemTaskEither({
   required final Wallet wallet,
   required final DataStreamGenerator dataStream,
-  required final int dataSize,
+  required final int dataStreamSize,
   final String target = '',
   final String anchor = '',
   final List<Tag> tags = const [],
@@ -65,8 +65,9 @@ DataItemTaskEither createDataItemTaskEither({
 
                     return TaskEither.of(DataItemResult(
                       id: signResult.id,
-                      size: dataItemHeaders.length + dataSize,
-                      stream: dataItemStreamGenerator,
+                      dataItemSize: dataItemHeaders.length + dataStreamSize,
+                      dataSize: dataStreamSize,
+                      streamGenerator: dataItemStreamGenerator,
                     ));
                   }));
             });

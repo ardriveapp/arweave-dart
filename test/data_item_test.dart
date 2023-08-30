@@ -35,7 +35,7 @@ void main() async {
         wallet: wallet,
         tags: tags,
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -46,10 +46,10 @@ void main() async {
         expect(error, None());
       }, (dataItem) {
         expect(dataItem.id, expectedDataItemId);
-        expect(dataItem.size, expectedDataItemSize);
-        expect(dataItem.stream, isA<DataStreamGenerator>());
+        expect(dataItem.dataItemSize, expectedDataItemSize);
+        expect(dataItem.streamGenerator, isA<DataStreamGenerator>());
 
-        final dataStream = dataItem.stream();
+        final dataStream = dataItem.streamGenerator();
 
         expect(dataStream, emitsThrough(data));
       });
@@ -61,7 +61,7 @@ void main() async {
         tags: tags,
         anchor: expectedDataItemId + '1',
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -83,7 +83,7 @@ void main() async {
         tags: tags,
         anchor: expectedDataItemId + '%',
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -103,7 +103,7 @@ void main() async {
         tags: tags,
         target: expectedDataItemId + '1',
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -125,7 +125,7 @@ void main() async {
         tags: tags,
         target: expectedDataItemId + '%',
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -144,7 +144,7 @@ void main() async {
         wallet: wallet,
         tags: tags,
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -155,9 +155,9 @@ void main() async {
         expect(error, None());
       }, (dataItem) async {
         final processedDataItem = await processDataItem(
-          dataItemStreamGenerator: dataItem.stream,
+          dataItemStreamGenerator: dataItem.streamGenerator,
           id: dataItem.id,
-          length: dataItem.size,
+          length: dataItem.dataItemSize,
         );
 
         expect(processedDataItem.id, expectedDataItemId);
@@ -182,7 +182,7 @@ void main() async {
         wallet: wallet,
         tags: tags,
         dataStream: dataStreamGenerator,
-        dataSize: data.length,
+        dataStreamSize: data.length,
       );
 
       final dataItemTask = await dataItemTaskEither.run();
@@ -193,9 +193,9 @@ void main() async {
         expect(error, None());
       }, (dataItem) async {
         final processedDataItem = await processDataItem(
-          dataItemStreamGenerator: dataItem.stream,
+          dataItemStreamGenerator: dataItem.streamGenerator,
           id: dataItem.id,
-          length: dataItem.size,
+          length: dataItem.dataItemSize,
         );
         final deserializedTags =
             deserializeTags(buffer: processedDataItem.tags);

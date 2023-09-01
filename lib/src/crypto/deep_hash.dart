@@ -3,34 +3,31 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
-import 'package:crypto/crypto.dart';
+import 'package:cryptography/cryptography.dart';
 
 Future<Uint8List> deepHash(dynamic data) async {
   if (data is Stream<List<int>>) {
-    final hasher = AccumulatorSink<Digest>();
-    final input = sha384.startChunkedConversion(hasher);
+    final sink = Sha384().newHashSink();
 
     int length = 0;
 
     await for (final chunk in data) {
       length += chunk.length;
-      input.add(chunk);
+      sink.add(chunk);
     }
-    input.close();
-
-    final Digest digest = hasher.events.single;
+    sink.close();
 
     final tag =
         stringToUint8List('blob') + stringToUint8List(length.toString());
 
-    final taggedHash = sha384Hash(tag) + digest.bytes;
+    final taggedHash = await sha384Hash(tag) + (await sink.hash()).bytes;
 
     return sha384Hash(taggedHash);
   } else if (data is List<List> || data is List<Stream<List<int>>>) {
     final tag =
         stringToUint8List('list') + stringToUint8List(data.length.toString());
 
-    return await deepHashChunks(data, sha384Hash(tag));
+    return await deepHashChunks(data, await sha384Hash(tag));
   }
 
   final Uint8List _data = data as Uint8List;
@@ -38,9 +35,9 @@ Future<Uint8List> deepHash(dynamic data) async {
   final tag = stringToUint8List('blob') +
       stringToUint8List(_data.lengthInBytes.toString());
 
-  final taggedHash = sha384Hash(tag) + sha384Hash(_data);
+  final taggedHash = await sha384Hash(tag) + await sha384Hash(_data);
 
-  return sha384Hash(taggedHash);
+  return await sha384Hash(taggedHash);
 }
 
 Future<Uint8List> deepHashChunks(dynamic chunks, Uint8List acc) async {
@@ -49,7 +46,7 @@ Future<Uint8List> deepHashChunks(dynamic chunks, Uint8List acc) async {
   }
 
   final hashPair = acc + await deepHash(chunks[0]);
-  final newAcc = sha384Hash(hashPair);
+  final newAcc = await sha384Hash(hashPair);
 
   return await deepHashChunks(
       chunks.length == 1 ? [] : chunks.sublist(1), newAcc);
@@ -59,6 +56,8 @@ Uint8List stringToUint8List(String string) {
   return Uint8List.fromList(utf8.encode(string));
 }
 
-Uint8List sha384Hash(List<int> data) {
-  return Uint8List.fromList(sha384.convert(data).bytes);
+final sha384 = Sha384();
+
+Future<Uint8List> sha384Hash(List<int> data) async {
+  return Uint8List.fromList((await sha384.hash(data)).bytes);
 }

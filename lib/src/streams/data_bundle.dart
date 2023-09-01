@@ -10,26 +10,45 @@ import 'data_item.dart';
 import 'data_models.dart';
 import 'errors.dart';
 
-TaskEither<DataItemError, dynamic> createBundleTaskEither({
-  required final Wallet wallet,
-  required final String anchor,
-  required final String target,
-  required final List<Tag> tags,
-  required final BigInt quantity,
-  required final BigInt reward,
-}) {
-  return TaskEither.of({});
+class DataItemFile {
+  final int dataSize;
+  final DataStreamGenerator streamGenerator;
+  final String target;
+  final String anchor;
+  final List<Tag> tags;
+
+  const DataItemFile({
+    required this.dataSize,
+    required this.streamGenerator,
+    this.target = '',
+    this.anchor = '',
+    this.tags = const [],
+  });
 }
 
-typedef BundledDataItemResult = TaskEither<DataItemError, DataItemResult>;
 BundledDataItemResult createBundledDataItemTaskEither({
   required final Wallet wallet,
-  required DataBundleTaskEither dataBundleTaskEither,
-  final String target = '',
-  final String anchor = '',
-  final List<Tag> tags = const [],
+  required final List<DataItemFile> dataItemFiles,
+  required final List<Tag> tags,
 }) {
-  return dataBundleTaskEither.flatMap((dataBundle) {
+  final List<DataItemTaskEither> dataItemTaskEitherList = [];
+  final dataItemCount = dataItemFiles.length;
+  for (var i = 0; i < dataItemCount; i++) {
+    final dataItem = dataItemFiles[i];
+
+    final dataItemTaskEither = createDataItemTaskEither(
+      wallet: wallet,
+      dataStream: dataItem.streamGenerator,
+      dataStreamSize: dataItem.dataSize,
+      target: dataItem.target,
+      anchor: dataItem.anchor,
+      tags: dataItem.tags,
+    );
+    dataItemTaskEitherList.add(dataItemTaskEither);
+  }
+
+  return createDataBundleTaskEither(dataItemTaskEitherList)
+      .flatMap((dataBundle) {
     final dataBundleStream = dataBundle.stream;
     final dataBundleSize = dataBundle.dataBundleStreamSize;
 
@@ -43,12 +62,41 @@ BundledDataItemResult createBundledDataItemTaskEither({
       wallet: wallet,
       dataStream: dataBundleStream,
       dataStreamSize: dataBundleSize,
-      target: target,
-      anchor: anchor,
+      target: '',
+      anchor: '',
       tags: bundledDataItemTags,
     ).flatMap((dataItem) => TaskEither.of(dataItem));
   });
 }
+
+typedef BundledDataItemResult = TaskEither<DataItemError, DataItemResult>;
+// BundledDataItemResult createBundledDataItemTaskEither({
+//   required final Wallet wallet,
+//   required DataBundleTaskEither dataBundleTaskEither,
+//   final String target = '',
+//   final String anchor = '',
+//   final List<Tag> tags = const [],
+// }) {
+//   return dataBundleTaskEither.flatMap((dataBundle) {
+//     final dataBundleStream = dataBundle.stream;
+//     final dataBundleSize = dataBundle.dataBundleStreamSize;
+//
+//     final bundledDataItemTags = [
+//       createTag('Bundle-Format', 'binary'),
+//       createTag('Bundle-Version', '2.0.0'),
+//       ...tags,
+//     ];
+//
+//     return createDataItemTaskEither(
+//       wallet: wallet,
+//       dataStream: dataBundleStream,
+//       dataStreamSize: dataBundleSize,
+//       target: target,
+//       anchor: anchor,
+//       tags: bundledDataItemTags,
+//     ).flatMap((dataItem) => TaskEither.of(dataItem));
+//   });
+// }
 
 DataBundleTaskEither createDataBundleTaskEither(
   final List<DataItemTaskEither> dataItemsTaskEither,
@@ -85,9 +133,6 @@ DataBundleTaskEither createDataBundleTaskEither(
     final bundleGenerator = combineStreamAndFunctionList(
         Stream.fromIterable([bundleHeaders]),
         dataItems.map((dataItem) => dataItem.streamGenerator).toList());
-
-    print('bundleHeaders size: ${bundleHeaders.length}');
-    print('dataItemsSize: $dataItemsSize');
 
     return TaskEither.of(DataBundleResult(
       dataBundleStreamSize: bundleHeaders.length + dataItemsSize,

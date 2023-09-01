@@ -79,8 +79,12 @@ TaskEither<DataItemError, Uint8List> deepHashTaskEither(
   final List<Stream<List<int>>> inputs,
 ) {
   return TaskEither.tryCatch(() async {
-    return await deepHash(inputs);
-  }, (error, _) => DeepHashError());
+    var stopwatch = Stopwatch()..start();
+    final deep = await deepHash(inputs);
+    stopwatch.stop();
+    print('deepHash: ${stopwatch.elapsed.inMilliseconds}');
+    return deep;
+  }, (error, _) => DataItemDeepHashError());
 }
 
 TaskEither<DataItemError, SignDataItemResult> signDataItemTaskEither({

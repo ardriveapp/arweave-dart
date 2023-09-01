@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:arweave/src/utils/bundle_tag_parser.dart';
 import 'package:arweave/utils.dart';
 import 'package:async/async.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../crypto/crypto.dart';
 import '../models/models.dart' hide DataStreamGenerator;
-import '../utils/bundle_tag_parser.dart';
 import 'data_models.dart';
 import 'errors.dart';
 import 'utils.dart';

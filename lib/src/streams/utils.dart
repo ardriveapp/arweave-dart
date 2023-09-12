@@ -8,8 +8,8 @@ import '../crypto/crypto.dart';
 import '../utils.dart';
 import '../utils/bundle_tag_parser.dart';
 import 'data_models.dart';
-import 'errors.dart';
 import 'deep_hash_stream.dart';
+import 'errors.dart';
 
 Tag createTag(final String name, final String value) => Tag(
       encodeStringToBase64(name),

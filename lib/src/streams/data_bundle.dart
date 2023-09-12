@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
-import '../models/models.dart';
 import './utils.dart';
+import '../models/models.dart';
 import 'data_item.dart';
 import 'data_models.dart';
 import 'errors.dart';
@@ -56,7 +56,7 @@ BundledDataItemResult createBundledDataItemTaskEither({
     final bundledDataItemTags = [
       createTag('Bundle-Format', 'binary'),
       createTag('Bundle-Version', '2.0.0'),
-      ...tags.map((tag) => createTag(tag.name, tag.value))
+      ...tags,
     ];
 
     return createDataItemTaskEither(

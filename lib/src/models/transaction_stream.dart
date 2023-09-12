@@ -6,11 +6,10 @@ import 'package:async/async.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import '../crypto/crypto.dart';
+import '../streams/data_models.dart';
 import '../utils.dart';
 
 part 'transaction_stream.g.dart';
-
-typedef DataStreamGenerator = Stream<Uint8List> Function();
 
 String _bigIntToString(BigInt v) => v.toString();
 BigInt _stringToBigInt(String v) => BigInt.parse(v);
@@ -51,7 +50,8 @@ class TransactionStream implements Transaction {
   ///
   /// This data is persisted unencoded to avoid having to convert it back from Base64 when signing.
   @override
-  Uint8List get data => throw UnimplementedError('Cannot access data from a stream transaction');
+  Uint8List get data =>
+      throw UnimplementedError('Cannot access data from a stream transaction');
   // Uint8List _data;
 
   @JsonKey(ignore: true)
@@ -97,8 +97,8 @@ class TransactionStream implements Transaction {
     String? signature,
   })  : _target = target ?? '',
         _quantity = quantity ?? BigInt.zero,
-        _dataStreamGenerator = dataStreamGenerator ?? 
-          (() => Stream.value(Uint8List(0))),
+        _dataStreamGenerator =
+            dataStreamGenerator ?? (() => Stream.value(Uint8List(0))),
         _dataRoot = dataRoot ?? '',
         _reward = reward ?? BigInt.zero,
         _owner = owner,
@@ -188,7 +188,8 @@ class TransactionStream implements Transaction {
 
   @override
   Future<void> setData(Uint8List data) async {
-    _dataStreamGenerator = ([int? s, int? e]) => Stream.value(Uint8List.sublistView(data, s ?? 0, e));
+    _dataStreamGenerator = ([int? s, int? e]) =>
+        Stream.value(Uint8List.sublistView(data, s ?? 0, e));
     _dataSize = data.length.toString();
   }
 
@@ -237,7 +238,8 @@ class TransactionStream implements Transaction {
   /// Sets the data and data size of this [Transaction].
   ///
   /// Also chunks and validates the incoming data for format 2 transactions.
-  Future<void> setDataStreamGenerator(DataStreamGenerator dataStreamGenerator, int dataSize) async {
+  Future<void> setDataStreamGenerator(
+      DataStreamGenerator dataStreamGenerator, int dataSize) async {
     _dataStreamGenerator = dataStreamGenerator;
     _dataSize = dataSize.toString();
 
@@ -276,7 +278,7 @@ class TransactionStream implements Transaction {
 
     final chunkDataStream = dataStreamGenerator();
     final chunker = ChunkedStreamReader(chunkDataStream);
-    
+
     for (var i = 0; i < chunks!.chunks.length; i++) {
       final chunk = chunks!.chunks[i];
       final proof = chunks!.proofs[i];

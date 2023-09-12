@@ -19,8 +19,6 @@ dependencies:
   mutex: ^3.0.1
   bip39: ^1.0.6
   hash: ^1.0.4
-  crypto: ^3.0.3
-  intl: ^0.18.1
   fpdart: ^1.1.0
   better_cryptography: ^1.0.0+1
 

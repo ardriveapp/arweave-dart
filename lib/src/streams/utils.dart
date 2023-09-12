@@ -9,19 +9,20 @@ import '../utils.dart';
 import '../utils/bundle_tag_parser.dart';
 import 'data_models.dart';
 import 'errors.dart';
+import 'deep_hash_stream.dart';
 
 Tag createTag(final String name, final String value) => Tag(
       encodeStringToBase64(name),
       encodeStringToBase64(value),
     );
 
-Stream<List<int>> Function() combineStreamAndFunctionList(
+Stream<Uint8List> Function() combineStreamAndFunctionList(
   final Stream<List<int>> mainStream,
-  final List<Stream<List<int>> Function()> functionList,
+  final List<Stream<Uint8List> Function()> functionList,
 ) {
   return () async* {
     await for (final data in mainStream) {
-      yield data;
+      yield Uint8List.fromList(data);
     }
 
     for (final function in functionList) {
@@ -36,7 +37,8 @@ Stream<List<int>> Function() combineStreamAndFunctionList(
 String toBase64Url(final String base64) =>
     base64.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 
-Stream<List<int>> toStream(final List<int> data) => Stream.fromIterable([data]);
+Stream<Uint8List> toStream(final List<int> data) =>
+    Stream.fromIterable([data]).map((list) => Uint8List.fromList(list));
 
 int decodeBytesToLong(final Uint8List list) {
   int value = 0;
@@ -48,8 +50,8 @@ int decodeBytesToLong(final Uint8List list) {
   return value;
 }
 
-Stream<List<int>> Function() createByteRangeStream(
-  final Stream<List<int>> stream,
+Stream<Uint8List> Function() createByteRangeStream(
+  final Stream<Uint8List> stream,
   final int start,
   final int end,
 ) {
@@ -62,12 +64,12 @@ Stream<List<int>> Function() createByteRangeStream(
       }
 
       final remainingBytes = end - currentBytePosition;
-      final chunkStart = start - currentBytePosition;
+      final chunkStart = (start - currentBytePosition).clamp(0, chunk.length);
       final chunkEnd =
           remainingBytes < chunk.length ? remainingBytes : chunk.length;
 
       if (chunkStart < chunkEnd) {
-        yield chunk.sublist(chunkStart, chunkEnd);
+        yield Uint8List.fromList(chunk.sublist(chunkStart, chunkEnd));
       }
 
       currentBytePosition += chunk.length;
@@ -76,15 +78,11 @@ Stream<List<int>> Function() createByteRangeStream(
 }
 
 TaskEither<DataItemError, Uint8List> deepHashTaskEither(
-  final List<Stream<List<int>>> inputs,
+  final List<Stream<Uint8List>> inputs,
 ) {
   return TaskEither.tryCatch(() async {
-    var stopwatch = Stopwatch()..start();
-    final deep = await deepHash(inputs);
-    stopwatch.stop();
-    print('deepHash: ${stopwatch.elapsed.inMilliseconds}');
-    return deep;
-  }, (error, _) => DataItemDeepHashError());
+    return await deepHashStream(inputs);
+  }, (error, _) => DeepHashStreamError());
 }
 
 TaskEither<DataItemError, SignDataItemResult> signDataItemTaskEither({

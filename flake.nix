@@ -12,6 +12,8 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             dart
+            nodejs_18
+            yarn-berry
           ];
         };
       });

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:arweave/src/streams/data_item.dart';
 import 'package:arweave/src/streams/data_models.dart';
@@ -17,8 +18,8 @@ void main() async {
 
   final data = utf8.encode(dataText);
 
-  Stream<List<int>> dataStreamGenerator() {
-    return Stream.fromIterable([data]);
+  dataStreamGenerator() {
+    return Stream.fromIterable([data]).map((list) => Uint8List.fromList(list));
   }
 
   final tags = [

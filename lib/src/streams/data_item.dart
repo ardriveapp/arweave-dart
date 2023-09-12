@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:arweave/src/utils/bundle_tag_parser.dart';
 import 'package:arweave/utils.dart';
@@ -7,10 +8,11 @@ import 'package:async/async.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../crypto/crypto.dart';
-import '../models/models.dart' hide DataStreamGenerator;
+import '../models/models.dart';
 import 'data_models.dart';
 import 'errors.dart';
 import 'utils.dart';
+import 'deep_hash_stream.dart';
 
 DataItemTaskEither createDataItemTaskEither({
   required final Wallet wallet,
@@ -75,7 +77,7 @@ DataItemTaskEither createDataItemTaskEither({
 }
 
 Future<ProcessedDataItem> processDataItem({
-  required Stream<List<int>> Function() dataItemStreamGenerator,
+  required Stream<Uint8List> Function() dataItemStreamGenerator,
   required String id,
   required int length,
 }) async {
@@ -129,14 +131,15 @@ Future<ProcessedDataItem> processDataItem({
 
   // get data
   final dataLength = length - byteIndex;
-  final dataStream = reader.readStream(dataLength);
+  final dataStream =
+      reader.readStream(dataLength).map((list) => Uint8List.fromList(list));
   final dataStart = byteIndex;
   final dataEnd = length;
   final dataStreamGenerator =
       createByteRangeStream(dataItemStreamGenerator(), dataStart, dataEnd);
 
   // verify
-  final signatureData = await deepHash([
+  final signatureData = await deepHashStream([
     toStream(utf8.encode('dataitem')),
     toStream(utf8.encode('1')), // Transaction format
     toStream(utf8.encode(signatureType.toString())),

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
-import '../models/models.dart' hide DataStreamGenerator;
+import '../models/models.dart';
 import './utils.dart';
 import 'data_item.dart';
 import 'data_models.dart';
@@ -26,6 +26,7 @@ class DataItemFile {
   });
 }
 
+typedef BundledDataItemResult = TaskEither<DataItemError, DataItemResult>;
 BundledDataItemResult createBundledDataItemTaskEither({
   required final Wallet wallet,
   required final List<DataItemFile> dataItemFiles,
@@ -55,7 +56,7 @@ BundledDataItemResult createBundledDataItemTaskEither({
     final bundledDataItemTags = [
       createTag('Bundle-Format', 'binary'),
       createTag('Bundle-Version', '2.0.0'),
-      ...tags,
+      ...tags.map((tag) => createTag(tag.name, tag.value))
     ];
 
     return createDataItemTaskEither(
@@ -68,35 +69,6 @@ BundledDataItemResult createBundledDataItemTaskEither({
     ).flatMap((dataItem) => TaskEither.of(dataItem));
   });
 }
-
-typedef BundledDataItemResult = TaskEither<DataItemError, DataItemResult>;
-// BundledDataItemResult createBundledDataItemTaskEither({
-//   required final Wallet wallet,
-//   required DataBundleTaskEither dataBundleTaskEither,
-//   final String target = '',
-//   final String anchor = '',
-//   final List<Tag> tags = const [],
-// }) {
-//   return dataBundleTaskEither.flatMap((dataBundle) {
-//     final dataBundleStream = dataBundle.stream;
-//     final dataBundleSize = dataBundle.dataBundleStreamSize;
-//
-//     final bundledDataItemTags = [
-//       createTag('Bundle-Format', 'binary'),
-//       createTag('Bundle-Version', '2.0.0'),
-//       ...tags,
-//     ];
-//
-//     return createDataItemTaskEither(
-//       wallet: wallet,
-//       dataStream: dataBundleStream,
-//       dataStreamSize: dataBundleSize,
-//       target: target,
-//       anchor: anchor,
-//       tags: bundledDataItemTags,
-//     ).flatMap((dataItem) => TaskEither.of(dataItem));
-//   });
-// }
 
 DataBundleTaskEither createDataBundleTaskEither(
   final List<DataItemTaskEither> dataItemsTaskEither,

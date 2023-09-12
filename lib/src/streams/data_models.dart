@@ -14,7 +14,7 @@ class SignDataItemResult {
   });
 }
 
-typedef DataStreamGenerator = Stream<List<int>> Function();
+typedef DataStreamGenerator = Stream<Uint8List> Function();
 typedef DataItemTaskEither = TaskEither<DataItemError, DataItemResult>;
 
 class DataItemResult {
@@ -65,4 +65,10 @@ class DataBundleResult {
     required this.dataItemsSize,
     required this.stream,
   });
+}
+
+abstract class SHA384Hasher {
+  Future<void> init();
+  void update(Uint8List data);
+  Future<Uint8List> hash();
 }

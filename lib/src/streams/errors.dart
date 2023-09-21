@@ -27,3 +27,7 @@ class TransactionDeepHashError extends StreamTransactionError {}
 class TransactionSignatureError extends StreamTransactionError {}
 
 class TransactionGetOwnerError extends StreamTransactionError {}
+
+class GetTxAnchorError extends StreamTransactionError {}
+
+class GetTxPriceError extends StreamTransactionError {}

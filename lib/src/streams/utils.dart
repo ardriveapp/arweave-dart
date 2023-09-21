@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:arweave/src/api/api.dart';
 import 'package:arweave/src/models/models.dart';
-import 'package:arweave/src/streams/transaction.dart';
 import 'package:async/async.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -177,6 +176,16 @@ TaskEither<StreamTransactionError, Uint8List> serializeTagsTaskEither(
   }, (error, _) => SerializeTagsError());
 }
 
+class PrepareChunksResult {
+  final TransactionChunksWithProofs chunks;
+  final String dataRoot;
+
+  PrepareChunksResult({
+    required this.chunks,
+    required this.dataRoot,
+  });
+}
+
 TaskEither<StreamTransactionError, PrepareChunksResult> prepareChunksTaskEither(
   final DataStreamGenerator dataStreamGenerator,
 ) {
@@ -220,5 +229,29 @@ Stream<TransactionChunk> getChunks(Stream<Uint8List> dataStream,
   await chunker.cancel();
 }
 
-Future<String> getTransactionAnchor() =>
-    ArweaveApi().get('tx_anchor').then((res) => res.body);
+TaskEither<StreamTransactionError, String> getTxAnchor(String? anchor) {
+  if (anchor != null) {
+    return TaskEither.of(anchor);
+  }
+
+  return TaskEither.tryCatch(() async {
+    return await ArweaveApi().get('tx_anchor').then((res) => res.body);
+  }, (error, _) => GetTxAnchorError());
+}
+
+TaskEither<StreamTransactionError, BigInt> getTxPrice(
+    BigInt? reward, int byteSize, String? targetAddress) {
+  if (reward != null) {
+    return TaskEither.of(reward);
+  }
+
+  final endpoint = targetAddress != null
+      ? 'price/$byteSize/$targetAddress'
+      : 'price/$byteSize';
+
+  return TaskEither.tryCatch(() async {
+    return await ArweaveApi()
+        .get(endpoint)
+        .then((res) => BigInt.parse(res.body));
+  }, (error, _) => GetTxPriceError());
+}

@@ -1,31 +1,29 @@
-abstract class DataItemError implements Exception {}
+abstract class StreamTransactionError implements Exception {}
 
-class DataItemCreationError extends DataItemError {}
+class DataItemCreationError extends StreamTransactionError {}
 
-class InvalidTargetSizeError extends DataItemError {}
+class InvalidTargetSizeError extends StreamTransactionError {}
 
-class InvalidAnchorSizeError extends DataItemError {}
+class InvalidAnchorSizeError extends StreamTransactionError {}
 
-class DeepHashStreamError extends DataItemError {}
+class DeepHashStreamError extends StreamTransactionError {}
 
-class SignatureError extends DataItemError {}
+class SignatureError extends StreamTransactionError {}
 
-class GetWalletOwnerError extends DataItemError {}
+class GetWalletOwnerError extends StreamTransactionError {}
 
-class ProcessedDataItemHeadersError extends DataItemError {}
+class ProcessedDataItemHeadersError extends StreamTransactionError {}
 
-class DecodeBase64ToBytesError extends DataItemError {}
+class DecodeBase64ToBytesError extends StreamTransactionError {}
 
-class SerializeTagsError extends DataItemError {}
+class SerializeTagsError extends StreamTransactionError {}
 
-abstract class TransactionError implements Exception {}
+class GenerateTransactionChunksError extends StreamTransactionError {}
 
-class GenerateTransactionChunksError extends TransactionError {}
+class PrepareChunksError extends StreamTransactionError {}
 
-class PrepareChunksError extends TransactionError {}
+class TransactionDeepHashError extends StreamTransactionError {}
 
-class TransactionDeepHashError extends TransactionError {}
+class TransactionSignatureError extends StreamTransactionError {}
 
-class TransactionSignatureError extends TransactionError {}
-
-class TransactionGetOwnerError extends TransactionError {}
+class TransactionGetOwnerError extends StreamTransactionError {}

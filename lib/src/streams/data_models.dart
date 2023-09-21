@@ -15,7 +15,7 @@ class SignDataItemResult {
 }
 
 typedef DataStreamGenerator = Stream<Uint8List> Function();
-typedef DataItemTaskEither = TaskEither<DataItemError, DataItemResult>;
+typedef DataItemTaskEither = TaskEither<StreamTransactionError, DataItemResult>;
 
 class DataItemResult {
   final String id;
@@ -53,7 +53,8 @@ class ProcessedDataItem {
   });
 }
 
-typedef DataBundleTaskEither = TaskEither<DataItemError, DataBundleResult>;
+typedef DataBundleTaskEither
+    = TaskEither<StreamTransactionError, DataBundleResult>;
 
 class DataBundleResult {
   final int dataBundleStreamSize;

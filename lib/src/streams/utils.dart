@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:arweave/src/api/api.dart';
 import 'package:arweave/src/models/models.dart';
+import 'package:arweave/src/streams/transaction.dart';
+import 'package:async/async.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../crypto/crypto.dart';
@@ -77,7 +80,7 @@ Stream<Uint8List> Function() createByteRangeStream(
   };
 }
 
-TaskEither<DataItemError, Uint8List> deepHashTaskEither(
+TaskEither<StreamTransactionError, Uint8List> deepHashTaskEither(
   final List<Stream<Uint8List>> inputs,
 ) {
   return TaskEither.tryCatch(() async {
@@ -85,7 +88,7 @@ TaskEither<DataItemError, Uint8List> deepHashTaskEither(
   }, (error, _) => DeepHashStreamError());
 }
 
-TaskEither<DataItemError, SignDataItemResult> signDataItemTaskEither({
+TaskEither<StreamTransactionError, SignDataItemResult> signDataItemTaskEither({
   required final Wallet wallet,
   required final Uint8List signatureData,
 }) {
@@ -100,12 +103,13 @@ TaskEither<DataItemError, SignDataItemResult> signDataItemTaskEither({
   }, (error, _) => SignatureError());
 }
 
-TaskEither<DataItemError, String> getOwnerTaskEither(final Wallet wallet) =>
+TaskEither<StreamTransactionError, String> getOwnerTaskEither(
+        final Wallet wallet) =>
     TaskEither.tryCatch(() async {
       return await wallet.getOwner();
     }, (error, _) => GetWalletOwnerError());
 
-TaskEither<DataItemError, bool> verifySignatureTaskEither({
+TaskEither<StreamTransactionError, bool> verifySignatureTaskEither({
   required final Uint8List owner,
   required final Uint8List signature,
   required final Uint8List signatureData,
@@ -133,7 +137,7 @@ TaskEither<DataItemError, bool> verifySignatureTaskEither({
   }, (error, _) => SignatureError());
 }
 
-TaskEither<DataItemError, Uint8List> decodeBase64ToBytesTaskEither(
+TaskEither<StreamTransactionError, Uint8List> decodeBase64ToBytesTaskEither(
   final String input,
 ) {
   return TaskEither.tryCatch(() async {
@@ -141,7 +145,7 @@ TaskEither<DataItemError, Uint8List> decodeBase64ToBytesTaskEither(
   }, (error, _) => DecodeBase64ToBytesError());
 }
 
-TaskEither<DataItemError, Uint8List> decodeAndCheckTargetTaskEither(
+TaskEither<StreamTransactionError, Uint8List> decodeAndCheckTargetTaskEither(
   final String target,
 ) {
   return TaskEither.tryCatch(() async {
@@ -153,7 +157,7 @@ TaskEither<DataItemError, Uint8List> decodeAndCheckTargetTaskEither(
   }, (error, _) => DecodeBase64ToBytesError());
 }
 
-TaskEither<DataItemError, Uint8List> decodeAndCheckAnchorTaskEither(
+TaskEither<StreamTransactionError, Uint8List> decodeAndCheckAnchorTaskEither(
   final String target,
 ) {
   return TaskEither.tryCatch(() async {
@@ -165,10 +169,56 @@ TaskEither<DataItemError, Uint8List> decodeAndCheckAnchorTaskEither(
   }, (error, _) => DecodeBase64ToBytesError());
 }
 
-TaskEither<DataItemError, Uint8List> serializeTagsTaskEither(
+TaskEither<StreamTransactionError, Uint8List> serializeTagsTaskEither(
   final List<Tag> tags,
 ) {
   return TaskEither.tryCatch(() async {
     return serializeTags(tags: tags);
   }, (error, _) => SerializeTagsError());
 }
+
+TaskEither<StreamTransactionError, PrepareChunksResult> prepareChunksTaskEither(
+  final DataStreamGenerator dataStreamGenerator,
+) {
+  return generateTransactionChunksTaskEither(dataStreamGenerator)
+      .flatMap((chunks) {
+    final dataRoot = encodeBytesToBase64(chunks.dataRoot);
+    return TaskEither.of(PrepareChunksResult(
+      chunks: chunks,
+      dataRoot: dataRoot,
+    ));
+  });
+}
+
+TaskEither<StreamTransactionError, TransactionChunksWithProofs>
+    generateTransactionChunksTaskEither(
+            DataStreamGenerator dataStreamGenerator) =>
+        TaskEither.tryCatch(
+            () async => await generateTransactionChunksFromStream(
+                dataStreamGenerator()),
+            (e, s) => GenerateTransactionChunksError());
+
+Stream<TransactionChunk> getChunks(Stream<Uint8List> dataStream,
+    TransactionChunksWithProofs chunks, String dataRoot, int dataSize) async* {
+  final chunker = ChunkedStreamReader(dataStream);
+
+  for (var i = 0; i < chunks.chunks.length; i++) {
+    final chunk = chunks.chunks[i];
+    final proof = chunks.proofs[i];
+
+    final chunkSize = chunk.maxByteRange - chunk.minByteRange;
+    final chunkData = await chunker.readBytes(chunkSize);
+
+    yield TransactionChunk(
+      dataRoot: dataRoot,
+      dataSize: dataSize.toString(),
+      dataPath: encodeBytesToBase64(proof.proof),
+      offset: proof.offset.toString(),
+      chunk: encodeBytesToBase64(chunkData),
+    );
+  }
+  await chunker.cancel();
+}
+
+Future<String> getTransactionAnchor() =>
+    ArweaveApi().get('tx_anchor').then((res) => res.body);

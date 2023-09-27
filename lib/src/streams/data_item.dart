@@ -36,7 +36,7 @@ DataItemTaskEither createDataItemTaskEither({
 
               final tagsBytes = serializeTags(tags: tags);
 
-              return deepHashTaskEither([
+              return deepHashStreamTaskEither([
                 toStream(utf8.encode('dataitem')),
                 toStream(utf8.encode('1')), // Transaction format
                 toStream(utf8.encode('1')),

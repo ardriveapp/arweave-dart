@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
-import '../utils/bundle_tag_parser.dart';
+import '../crypto/merkle.dart';
 import './utils.dart';
 import '../models/models.dart';
 import 'data_item.dart';
@@ -26,6 +26,7 @@ class TransactionResult {
   final BigInt reward;
   final String signature;
   final Stream<TransactionChunk> Function() chunkStreamGenerator;
+  final TransactionChunksWithProofs chunks;
 
   TransactionResult({
     required this.id,
@@ -39,6 +40,7 @@ class TransactionResult {
     required this.reward,
     required this.signature,
     required this.chunkStreamGenerator,
+    required this.chunks,
   });
 
   Map<String, dynamic> toJson() {
@@ -74,64 +76,79 @@ class DataItemFile {
   });
 }
 
-// typedef TransactionTaskEither
-//     = TaskEither<StreamTransactionError, TransactionResult>;
-// TransactionTaskEither createTransactionTaskEither({
-//   required final Wallet wallet,
-//   String? anchor,
-//   required final String target,
-//   List<Tag> tags = const [],
-//   required final BigInt quantity,
-//   BigInt? reward,
-//   required final DataStreamGenerator dataStreamGenerator,
-//   required final int dataSize,
-// }) {
-//   if (anchor == null) {
-//     anchor = await getTransactionAnchor();
-//
-//   }
-//
-//   return getOwnerTaskEither(wallet).flatMap((owner) =>
-//       prepareChunksTaskEither(dataStreamGenerator).flatMap((chunksWithProofs) {
-//         final chunks = chunksWithProofs.chunks;
-//         final dataRoot = chunksWithProofs.dataRoot;
-//
-//         return deepHashTaskEither([
-//           toStream(utf8.encode('2')), // Transaction format
-//           toStream(decodeBase64ToBytes(owner)),
-//           toStream(decodeBase64ToBytes(target)),
-//           toStream(utf8.encode(quantity.toString())),
-//           toStream(utf8.encode(reward.toString())),
-//           toStream(decodeBase64ToBytes(anchor)),
-//           toStream(serializeTags(tags: tags)),
-//           toStream(utf8.encode(dataSize.toString())),
-//           toStream(decodeBase64ToBytes(dataRoot)),
-//         ]).flatMap((signatureData) =>
-//             signDataItemTaskEither(wallet: wallet, signatureData: signatureData)
-//                 .flatMap((signResult) {
-//               final transaction = TransactionResult(
-//                 id: signResult.id,
-//                 anchor: anchor,
-//                 owner: owner,
-//                 tags: tags,
-//                 target: target,
-//                 quantity: quantity,
-//                 dataRoot: dataRoot,
-//                 dataSize: dataSize,
-//                 reward: reward,
-//                 signature: encodeBytesToBase64(signResult.signature),
-//                 chunkStreamGenerator: () => getChunks(
-//                   dataStreamGenerator(),
-//                   chunks,
-//                   dataRoot,
-//                   dataSize,
-//                 ),
-//               );
-//
-//               return TaskEither.of(transaction);
-//             }));
-//       }));
-// }
+typedef TransactionTaskEither
+    = TaskEither<StreamTransactionError, TransactionResult>;
+TransactionTaskEither createTransactionTaskEither({
+  required final Wallet wallet,
+  String? anchor,
+  String? target,
+  List<Tag> tags = const [],
+  BigInt? quantity,
+  BigInt? reward,
+  required final DataStreamGenerator dataStreamGenerator,
+  required final int dataSize,
+}) {
+  return getTxAnchor(anchor).flatMap((anchor) =>
+      getTxPrice(reward, dataSize, target).flatMap((reward) =>
+          getOwnerTaskEither(wallet).flatMap((owner) =>
+              prepareChunksTaskEither(dataStreamGenerator)
+                  .flatMap((chunksWithProofs) {
+                final chunks = chunksWithProofs.chunks;
+                final dataRoot = chunksWithProofs.dataRoot;
+
+                final bundleTags = [
+                  createTag('Bundle-Format', 'binary'),
+                  createTag('Bundle-Version', '2.0.0'),
+                  ...tags,
+                ];
+                final finalQuantity = quantity ?? BigInt.zero;
+
+                return deepHashTaskEither([
+                  utf8.encode("2"),
+                  decodeBase64ToBytes(owner),
+                  decodeBase64ToBytes(target ?? ''),
+                  utf8.encode(finalQuantity.toString()),
+                  utf8.encode(reward.toString()),
+                  decodeBase64ToBytes(anchor),
+                  bundleTags
+                      .map(
+                        (t) => [
+                          decodeBase64ToBytes(t.name),
+                          decodeBase64ToBytes(t.value),
+                        ],
+                      )
+                      .toList(),
+                  utf8.encode(dataSize.toString()),
+                  decodeBase64ToBytes(dataRoot),
+                ]).flatMap((signatureData) {
+                  return signDataItemTaskEither(
+                          wallet: wallet, signatureData: signatureData)
+                      .flatMap((signResult) {
+                    final transaction = TransactionResult(
+                      id: signResult.id,
+                      anchor: anchor,
+                      owner: owner,
+                      tags: bundleTags,
+                      target: target ?? '',
+                      quantity: finalQuantity,
+                      dataRoot: dataRoot,
+                      dataSize: dataSize,
+                      reward: reward,
+                      signature: encodeBytesToBase64(signResult.signature),
+                      chunkStreamGenerator: () => getChunks(
+                        dataStreamGenerator(),
+                        chunks,
+                        dataRoot,
+                        dataSize,
+                      ),
+                      chunks: chunks,
+                    );
+
+                    return TaskEither.of(transaction);
+                  });
+                });
+              }))));
+}
 
 typedef BundledDataItemResult
     = TaskEither<StreamTransactionError, DataItemResult>;

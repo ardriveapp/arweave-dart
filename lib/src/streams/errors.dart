@@ -8,6 +8,8 @@ class InvalidAnchorSizeError extends StreamTransactionError {}
 
 class DeepHashStreamError extends StreamTransactionError {}
 
+class DeepHashError extends StreamTransactionError {}
+
 class SignatureError extends StreamTransactionError {}
 
 class GetWalletOwnerError extends StreamTransactionError {}
@@ -31,3 +33,7 @@ class TransactionGetOwnerError extends StreamTransactionError {}
 class GetTxAnchorError extends StreamTransactionError {}
 
 class GetTxPriceError extends StreamTransactionError {}
+
+class PostTxHeadersError extends StreamTransactionError {}
+
+class PostTxChunksError extends StreamTransactionError {}

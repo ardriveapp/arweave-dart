@@ -79,12 +79,23 @@ Stream<Uint8List> Function() createByteRangeStream(
   };
 }
 
-TaskEither<StreamTransactionError, Uint8List> deepHashTaskEither(
+TaskEither<StreamTransactionError, Uint8List> deepHashStreamTaskEither(
   final List<Stream<Uint8List>> inputs,
 ) {
   return TaskEither.tryCatch(() async {
     return await deepHashStream(inputs);
   }, (error, _) => DeepHashStreamError());
+}
+
+TaskEither<StreamTransactionError, Uint8List> deepHashTaskEither(
+  final List<Object> inputs,
+) {
+  return TaskEither.tryCatch(() async {
+    return await deepHash(inputs);
+  }, (error, _) {
+    print(error);
+    return DeepHashError();
+  });
 }
 
 TaskEither<StreamTransactionError, SignDataItemResult> signDataItemTaskEither({

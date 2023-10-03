@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:arweave/arweave.dart';
 import 'package:async/async.dart';
-import 'package:http/http.dart' as http;
+import 'package:http/http.dart';
+import 'http_client/io.dart' if (dart.library.js) 'http_client/browsers.dart';
 
 String gqlGetTxInfo(String txId) => '''
 {
@@ -45,8 +46,8 @@ Future<
 }) async {
   final downloadUrl = "https://$gatewayHost/$txId";
   final gqlUrl = "https://$gatewayHost/graphql";
-  final client = http.Client();
-  final gqlResponse = await http.post(
+
+  final gqlResponse = await post(
     Uri.parse(gqlUrl),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'query': gqlGetTxInfo(txId)}),
@@ -98,10 +99,11 @@ Future<
     if (onProgress != null) {
       progressTimer = setProgressTimer(onProgress);
     }
-    final request = http.Request('GET', Uri.parse(downloadUrl));
+    final request = Request('GET', Uri.parse(downloadUrl));
     if (startByte > 0) {
       request.headers['Range'] = 'bytes=$startByte-';
     }
+    final client = getClient();
     final streamResponse = await client.send(request);
 
     final splitStream = StreamSplitter(streamResponse.stream);

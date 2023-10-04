@@ -27,7 +27,6 @@ dependencies:
       url: git@github.com:karlprieb/fetch_client.git
       ref: ignore-headers
 
-
 dev_dependencies:
   build_runner: ^2.0.4
   json_serializable: ^6.1.4

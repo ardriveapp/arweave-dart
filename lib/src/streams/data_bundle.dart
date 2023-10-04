@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
-import '../crypto/merkle.dart';
 import './utils.dart';
+import '../crypto/merkle.dart';
 import '../models/models.dart';
 import 'data_item.dart';
 import 'data_models.dart';
@@ -151,24 +151,24 @@ TransactionTaskEither createTransactionTaskEither({
 }
 
 typedef BundledDataItemResult
-    = TaskEither<StreamTransactionError, DataItemResult>;
+    = Future<TaskEither<StreamTransactionError, DataItemResult>>;
 BundledDataItemResult createBundledDataItemTaskEither({
   required final Wallet wallet,
   required final List<DataItemFile> dataItemFiles,
   required final List<Tag> tags,
-}) {
+}) async {
   final List<DataItemResult> dataItemList = [];
   final dataItemCount = dataItemFiles.length;
   for (var i = 0; i < dataItemCount; i++) {
     final dataItem = dataItemFiles[i];
-    createDataItemTaskEither(
+    await createDataItemTaskEither(
       wallet: wallet,
       dataStream: dataItem.streamGenerator,
       dataStreamSize: dataItem.dataSize,
       target: dataItem.target,
       anchor: dataItem.anchor,
       tags: dataItem.tags,
-    ).map((dataItem) => dataItemList.add(dataItem));
+    ).map((dataItem) => dataItemList.add(dataItem)).run();
   }
 
   return createDataBundleTaskEither(TaskEither.of(dataItemList))

@@ -196,9 +196,11 @@ BundledDataItemResult createBundledDataItemTaskEither({
 DataBundleTaskEither createDataBundleTaskEither(
   final TaskEither<StreamTransactionError, List<DataItemResult>> dataItems,
 ) {
+  const dataItemHeaderSize = 64;
+
   return dataItems.flatMap((dataItemResults) {
     final dataItemsLength = dataItemResults.length;
-    final headers = Uint8List(dataItemsLength * 64);
+    final headers = Uint8List(dataItemsLength * dataItemHeaderSize);
     int dataItemsSize = 0;
 
     for (var i = 0; i < dataItemsLength; i++) {
@@ -208,7 +210,7 @@ DataBundleTaskEither createDataBundleTaskEither(
 
       dataItemsSize += dataItemLength;
 
-      final header = Uint8List(64);
+      final header = Uint8List(dataItemHeaderSize);
 
       // Set offset
       header.setAll(0, longTo32ByteArray(dataItemLength));
@@ -217,7 +219,7 @@ DataBundleTaskEither createDataBundleTaskEither(
       header.setAll(32, id);
 
       // Add header to array of headers
-      headers.setAll(64 * i, header);
+      headers.setAll(dataItemHeaderSize * i, header);
     }
 
     final bundleHeaders = [

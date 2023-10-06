@@ -93,7 +93,6 @@ TaskEither<StreamTransactionError, Uint8List> deepHashTaskEither(
   return TaskEither.tryCatch(() async {
     return await deepHash(inputs);
   }, (error, _) {
-    print(error);
     return DeepHashError();
   });
 }

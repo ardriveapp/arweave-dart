@@ -31,7 +31,6 @@ TaskEither<StreamTransactionError, Stream<(int, int)>> uploadTransaction(
   final txHeaders = transaction.toJson();
 
   return _postTransactionHeaderTaskEither(arweave, txHeaders).flatMap((_) {
-    print('call post chunks');
     return TaskEither.of(_postChunks(arweave, transaction));
   });
 }
@@ -39,12 +38,9 @@ TaskEither<StreamTransactionError, Stream<(int, int)>> uploadTransaction(
 TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
     ArweaveApi arweave, Map<String, dynamic> headers) {
   return TaskEither.tryCatch(() async {
-    print('Uploading transaction headers...');
-
     final res = await arweave.post('tx', body: json.encode(headers));
 
     if (!(res.statusCode >= 200 && res.statusCode < 300)) {
-      print('Unable to upload transaction: ${res.statusCode}');
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 
@@ -56,7 +52,6 @@ Stream<(int, int)> _postChunks(
   ArweaveApi arweave,
   TransactionResult transaction,
 ) async* {
-  print('Uploading chunks...');
   final chunkUploadCompletionStreamController = StreamController<int>();
   final chunkStream = transaction.chunkStreamGenerator();
   final chunkQueue = StreamQueue(chunkStream);
@@ -84,11 +79,8 @@ Stream<(int, int)> _postChunks(
         },
       );
 
-      print('chunk uploaded');
-
       chunkUploadCompletionStreamController.add(chunkIndex);
     } catch (err) {
-      print('Chunk upload failed at $chunkIndex');
       chunkUploadCompletionStreamController.addError(err);
     }
   }
@@ -148,7 +140,6 @@ Future<void> _uploadChunk(ArweaveApi arweave, int chunkIndex,
   }
 
   final res = await arweave.post('chunk', body: json.encode(chunk));
-  print('Uploaded chunk $chunkIndex: ${res.statusCode}');
 
   if (res.statusCode != 200) {
     final responseError = getResponseError(res);

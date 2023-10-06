@@ -39,7 +39,7 @@ DataItemTaskEither createDataItemTaskEither({
               return deepHashStreamTaskEither([
                 toStream(utf8.encode('dataitem')),
                 toStream(utf8.encode('1')), // Transaction format
-                toStream(utf8.encode('1')),
+                toStream(utf8.encode('1')), // Signature type
                 toStream(ownerBytes),
                 toStream(targetBytes),
                 toStream(anchorBytes),

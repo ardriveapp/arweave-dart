@@ -104,7 +104,7 @@ TransactionTaskEither createTransactionTaskEither({
                 final finalQuantity = quantity ?? BigInt.zero;
 
                 return deepHashTaskEither([
-                  utf8.encode("2"),
+                  utf8.encode("2"), // Transaction format
                   decodeBase64ToBytes(owner),
                   decodeBase64ToBytes(target ?? ''),
                   utf8.encode(finalQuantity.toString()),

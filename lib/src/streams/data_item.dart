@@ -39,7 +39,7 @@ DataItemTaskEither createDataItemTaskEither({
               return deepHashStreamTaskEither([
                 toStream(utf8.encode('dataitem')),
                 toStream(utf8.encode('1')), // Transaction format
-                toStream(utf8.encode('1')),
+                toStream(utf8.encode('1')), // Signature type
                 toStream(ownerBytes),
                 toStream(targetBytes),
                 toStream(anchorBytes),
@@ -157,10 +157,11 @@ Future<ProcessedDataItem> processDataItem({
   }
 
   final signVerification = await rsaPssVerify(
-      input: signatureData,
-      signature: signature,
-      modulus: decodeBytesToBigInt(owner),
-      publicExponent: BigInt.from(65537));
+    input: signatureData,
+    signature: signature,
+    modulus: decodeBytesToBigInt(owner),
+    publicExponent: publicExponent,
+  );
 
   if (!signVerification) {
     throw Exception("Invalid signature");

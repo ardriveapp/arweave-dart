@@ -54,14 +54,3 @@ class SHA384Hash implements SHA384Hasher {
 Future<Uint8List> sha384(Uint8List data) async {
   return await promiseToFuture(_sha384Hash(data));
 }
-
-Uint8List _hexStringToUint8List(String hex) {
-  var length = hex.length;
-  var bytes = Uint8List(length ~/ 2);
-
-  for (var i = 0; i < length; i += 2) {
-    bytes[i ~/ 2] = int.parse(hex.substring(i, i + 2), radix: 16);
-  }
-
-  return bytes;
-}

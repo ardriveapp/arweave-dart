@@ -94,7 +94,6 @@ TaskEither<StreamTransactionError, Uint8List> deepHashTaskEither(
   return TaskEither.tryCatch(() async {
     return await deepHash(inputs);
   }, (error, _) {
-    print(error);
     return DeepHashError();
   });
 }
@@ -135,10 +134,11 @@ TaskEither<StreamTransactionError, bool> verifySignatureTaskEither({
     }
 
     final signVerification = await rsaPssVerify(
-        input: signatureData,
-        signature: signature,
-        modulus: decodeBytesToBigInt(owner),
-        publicExponent: BigInt.from(65537));
+      input: signatureData,
+      signature: signature,
+      modulus: decodeBytesToBigInt(owner),
+      publicExponent: publicExponent,
+    );
 
     if (!signVerification) {
       throw Exception("Invalid signature");

@@ -1,6 +1,6 @@
 name: arweave
 description: ""
-version: 3.7.0
+version: 3.8.0
 environment:
   sdk: ">=3.0.0 <4.0.0"
 publish_to: none
@@ -24,8 +24,8 @@ dependencies:
   better_cryptography: ^1.0.0+1
   fetch_client:
     git:
-      url: https://github.com/karlprieb/fetch_client.git
-      ref: ignore-headers
+      url: https://github.com/thiagocarvalhodev/fetch_client.git
+      ref: PE-4754-address-code-review-comments-on-uploader-downloader-implementations
   dio: ^5.3.3
 
 dev_dependencies:

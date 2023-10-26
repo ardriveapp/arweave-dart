@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:arweave/src/api/api.dart';
@@ -265,4 +266,88 @@ TaskEither<StreamTransactionError, BigInt> getTxPrice(
         .get(endpoint)
         .then((res) => BigInt.parse(res.body));
   }, (error, _) => GetTxPriceError());
+}
+
+Future<bool> verifyDataItem({
+  required String id,
+  required String owner,
+  required String signature,
+  required String target,
+  required String anchor,
+  required List<Tag> tags,
+  required Stream<Uint8List> dataStream,
+}) async {
+  final signatureData = await deepHashStream([
+    toStream(utf8.encode('dataitem')),
+    toStream(utf8.encode('1')), // Transaction format
+    toStream(utf8.encode('1')), // Signature type
+    toStream(decodeBase64ToBytes(owner)),
+    toStream(decodeBase64ToBytes(target)),
+    toStream(decodeBase64ToBytes(anchor)),
+    toStream(serializeTags(tags: tags)),
+    dataStream,
+  ]);
+  final claimedSignatureBytes = decodeBase64ToBytes(signature);
+
+  final idHash = await sha256.hash(claimedSignatureBytes);
+  final expectedId = encodeBytesToBase64(idHash.bytes);
+
+  if (expectedId != id) {
+    return false;
+  }
+
+  return rsaPssVerify(
+      input: signatureData,
+      signature: claimedSignatureBytes,
+      modulus: decodeBase64ToBigInt(owner),
+      publicExponent: BigInt.from(65537));
+}
+
+Future<bool> verifyTransaction({
+  required String id,
+  required String owner,
+  required String signature,
+  required String target,
+  required String anchor,
+  required int quantity,
+  required int reward,
+  required int dataSize,
+  required List<Tag> tags,
+  required Stream<Uint8List> dataStream,
+}) async {
+  final chunksWithProofs =
+      await generateTransactionChunksFromStream(dataStream);
+
+  final signatureData = await deepHash([
+    utf8.encode("2"),
+    decodeBase64ToBytes(owner),
+    decodeBase64ToBytes(target),
+    utf8.encode(quantity.toString()),
+    utf8.encode(reward.toString()),
+    decodeBase64ToBytes(anchor),
+    tags
+        .map(
+          (t) => [
+            decodeBase64ToBytes(t.name),
+            decodeBase64ToBytes(t.value),
+          ],
+        )
+        .toList(),
+    utf8.encode(dataSize.toString()),
+    chunksWithProofs.dataRoot,
+  ]);
+
+  final claimedSignatureBytes = decodeBase64ToBytes(signature);
+
+  final idHash = await sha256.hash(claimedSignatureBytes);
+  final expectedId = encodeBytesToBase64(idHash.bytes);
+
+  if (id != expectedId) return false;
+
+  return rsaPssVerify(
+    input: signatureData,
+    signature: claimedSignatureBytes,
+    modulus: decodeBase64ToBigInt(owner),
+    publicExponent: publicExponent,
+  );
 }

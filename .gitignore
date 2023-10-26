@@ -1,4 +1,17 @@
-# Files and directories created by pub
+# Dart
 .dart_tool/
-.packages
 build/
+pubspec.lock
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Mac
+.DS_Store
+
+# Direnv
+.direnv
+

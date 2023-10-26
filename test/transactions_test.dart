@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
-import 'package:arweave/src/models/transaction_stream.dart';
 import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
@@ -155,7 +154,7 @@ void main() {
           emitsDone,
         ]),
       );
-    });
+    }, skip: "TODO: recreate this test mocking network requests");
 
     group('stream', (() {
       test('create, sign, and verify data transaction', () async {
@@ -166,10 +165,9 @@ void main() {
 
         final transaction = await client.transactions.prepare(
             TransactionStream.withBlobData(
-              dataStreamGenerator: fileStreamMeta.dataStreamGenerator,
-              dataSize: fileStreamMeta.dataSize,
-              reward: BigInt.one
-            ),
+                dataStreamGenerator: fileStreamMeta.dataStreamGenerator,
+                dataSize: fileStreamMeta.dataSize,
+                reward: BigInt.one),
             wallet);
 
         transaction
@@ -194,23 +192,23 @@ void main() {
         'browser': Skip('dart:io unavailable'),
       });
 
-      test('successfully validate data from 1mb.bin set on prepared transaction',
+      test(
+          'successfully validate data from 1mb.bin set on prepared transaction',
           () async {
         const fileName = 'test/fixtures/1mb.bin';
         final fileStreamMeta = await getFileStreamMeta(fileName);
 
         final transaction = await client.transactions.prepare(
             TransactionStream.withBlobData(
-              dataStreamGenerator: fileStreamMeta.dataStreamGenerator,
-              dataSize: fileStreamMeta.dataSize,
-              reward: BigInt.one
-            ),
+                dataStreamGenerator: fileStreamMeta.dataStreamGenerator,
+                dataSize: fileStreamMeta.dataSize,
+                reward: BigInt.one),
             await getTestWallet());
 
-        expect(transaction.setDataStreamGenerator(
-            fileStreamMeta.dataStreamGenerator,
-            fileStreamMeta.dataSize),
-          completion(null));
+        expect(
+            transaction.setDataStreamGenerator(
+                fileStreamMeta.dataStreamGenerator, fileStreamMeta.dataSize),
+            completion(null));
       }, onPlatform: {
         'browser': Skip('dart:io unavailable'),
       });

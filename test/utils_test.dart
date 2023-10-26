@@ -134,7 +134,6 @@ void main() async {
           entropy: input,
         );
 
-        print(encodeHEX(expected));
         expect(drbg.generate(32), expected);
       });
 
@@ -191,6 +190,5 @@ void main() async {
         expect(drbg.generate(4), equals(res));
       }
     });
-
   });
 }

@@ -1,0 +1,17 @@
+{
+  "name": "arweave-sha384",
+  "version": "0.1.0",
+  "main": "dist/sha384.js",
+  "typings": "dist/index.d.ts",
+  "packageManager": "yarn@3.6.3",
+  "scripts": {
+    "build": "node build.js && tsc"
+  },
+  "dependencies": {
+    "hash-wasm": "^4.9.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.2",
+    "typescript": "^5.2.2"
+  }
+}

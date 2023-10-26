@@ -16,10 +16,6 @@ void main() {
   final client = Arweave();
 
   group('upload transactions:', () {
-    final transactionFieldPattern =
-        RegExp(r'^[a-z0-9-_]{64}$', caseSensitive: false);
-    final signaturePattern = RegExp(r'^[a-z0-9-_]+$', caseSensitive: false);
-
     test('successfully seed existing network transaction', () async {
       final transaction = await client.transactions
           .get('8C6yYu5pWMADLSd65wTnrzgN-9eLj9sFbyVC3prSaFs');
@@ -100,11 +96,13 @@ void main() {
 
     group('stream', (() {
       test('successfully seed existing network transaction', () async {
-        final transaction = await client.transactions
-            .get<TransactionStream>('8C6yYu5pWMADLSd65wTnrzgN-9eLj9sFbyVC3prSaFs');
+        final transaction = await client.transactions.get<TransactionStream>(
+            '8C6yYu5pWMADLSd65wTnrzgN-9eLj9sFbyVC3prSaFs');
 
-        final data = utf8.encode('{"name":"Blockchains & Cryptocurrencies"}') as Uint8List;
-        await transaction!.setDataStreamGenerator(() => Stream.value(data), data.length);
+        final data = utf8.encode('{"name":"Blockchains & Cryptocurrencies"}')
+            as Uint8List;
+        await transaction!
+            .setDataStreamGenerator(() => Stream.value(data), data.length);
 
         expect(
           client.transactions.upload(transaction, dataOnly: true),
@@ -117,12 +115,12 @@ void main() {
 
       test('successfully seed existing large network transaction', () async {
         final txId = 'gAnkEioD7xoP3qx7VepVEp1O0v4L1UgtBV_trM-Ria8';
-        final transaction = await client.transactions.get<TransactionStream>(txId);
+        final transaction =
+            await client.transactions.get<TransactionStream>(txId);
         final fileStreamMeta = await getFileStreamMeta("test/fixtures/$txId");
 
         await transaction!.setDataStreamGenerator(
-          fileStreamMeta.dataStreamGenerator,
-          fileStreamMeta.dataSize);
+            fileStreamMeta.dataStreamGenerator, fileStreamMeta.dataSize);
 
         int lastUploadedChunkCount = 0;
         double lastProgress = 0;

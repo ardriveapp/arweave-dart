@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:http/http.dart';
+import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
 import 'crypto/crypto.dart';
 
@@ -24,6 +25,13 @@ BigInt decodeBytesToBigInt(List<int> bytes) {
     result += BigInt.from(bytes[bytes.length - i - 1]) << (8 * i);
   }
   return result;
+}
+
+String decodeStringFromBase64(String base64String) {
+  var paddingLength = 4 - base64String.length % 4;
+  var paddedBase64String =
+      paddingLength != 4 ? base64String + ('=' * paddingLength) : base64String;
+  return utf8.decode(base64Url.decode(paddedBase64String));
 }
 
 String encodeStringToBase64(String string) =>
@@ -89,7 +97,7 @@ String winstonToAr(BigInt winston) {
 }
 
 /// Safely get the error from an Arweave HTTP response.
-String getResponseError(Response res) {
+String getResponseError(http.Response res) {
   if (res.headers['Content-Type'] == 'application/json') {
     Map<String, dynamic> errJson = json.decode(res.body);
 
@@ -101,6 +109,20 @@ String getResponseError(Response res) {
   }
 
   return res.body;
+}
+
+String getResponseErrorFromDioRespose(Response res) {
+  if (res.headers['Content-Type'] == 'application/json') {
+    Map<String, dynamic> errJson = json.decode(res.data);
+
+    if (errJson['data'] != null) {
+      return errJson['data'] is Map
+          ? errJson['data']['error']
+          : errJson['data'];
+    }
+  }
+
+  return res.data;
 }
 
 Future<String> ownerToAddress(String owner) async => encodeBytesToBase64(

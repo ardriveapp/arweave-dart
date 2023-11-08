@@ -40,6 +40,11 @@ class Wallet {
         d: encodeBigIntToBytes(privK.privateExponent!),
         p: encodeBigIntToBytes(privK.p!),
         q: encodeBigIntToBytes(privK.q!),
+        dp: encodeBigIntToBytes(
+            privK.privateExponent! % (privK.p! - BigInt.one)),
+        dq: encodeBigIntToBytes(
+            privK.privateExponent! % (privK.q! - BigInt.one)),
+        qi: encodeBigIntToBytes(privK.q!.modInverse(privK.p!)),
       ),
     );
   }
@@ -81,7 +86,28 @@ class Wallet {
       }
     });
 
-    return Wallet(keyPair: Jwk.fromJson(jwk).toKeyPair());
+    var privK = Jwk.fromJson(jwk).toKeyPair() as RsaKeyPairData;
+
+    if (privK.dp == null ||
+        privK.dp!.isEmpty ||
+        privK.dq == null ||
+        privK.dq!.isEmpty ||
+        privK.qi == null ||
+        privK.qi!.isEmpty) {
+      final d = decodeBytesToBigInt(privK.d);
+      final p = decodeBytesToBigInt(privK.p);
+      final q = decodeBytesToBigInt(privK.q);
+
+      jwk.addAll({
+        'dp': base64.normalize(encodeBigIntToBase64(d % (p - BigInt.one))),
+        'dq': base64.normalize(encodeBigIntToBase64(d % (q - BigInt.one))),
+        'qi': base64.normalize(encodeBigIntToBase64(q.modInverse(p))),
+      });
+
+      privK = Jwk.fromJson(jwk).toKeyPair() as RsaKeyPairData;
+    }
+
+    return Wallet(keyPair: privK);
   }
 
   Map<String, dynamic> toJwk() => Jwk.fromKeyPair(_keyPair!).toJson().map(

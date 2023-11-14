@@ -102,4 +102,22 @@ void main() {
       'browser': Skip('TODO: implement this test for browser'),
     });
   });
+
+  test('loading wallets with missing dp, dq, and qi will have values generated',
+      () async {
+    final wallet =
+        await Wallet.createWalletFromMnemonic(testArweaveAppWalletMnemonic);
+
+    final jwk = wallet.toJwk();
+
+    jwk.remove('dp');
+    jwk.remove('dq');
+    jwk.remove('qi');
+
+    final wallet2 = Wallet.fromJwk(jwk);
+
+    expect(wallet.toJwk(), equals(wallet2.toJwk()));
+  }, onPlatform: {
+    'browser': Skip('TODO: implement this test for browser'),
+  });
 }

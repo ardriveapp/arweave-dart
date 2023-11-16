@@ -71,72 +71,66 @@ Future<
   late Timer progressTimer;
 
   Future<void> startDownload([int startByte = 0]) async {
-    try {
-      if (onProgress != null) {
-        progressTimer = setProgressTimer(onProgress);
-      }
-      final request = Request('GET', Uri.parse(downloadUrl));
-      if (startByte > 0) {
-        request.headers['Range'] = 'bytes=$startByte-';
-      }
-      final client = getClient();
-      final streamResponse = await client.send(request);
-
-      final splitStream = StreamSplitter(streamResponse.stream);
-      final downloadStream = splitStream.split();
-      final verificationStream = splitStream.split();
-
-      // Calling `close()` indicates that no further streams will be created,
-      // causing splitStream to function without an internal buffer.
-      // The future will be completed when both streams are consumed, so we
-      // shouldn't await it here.
-      unawaited(splitStream.close());
-
-      if (verifyDownload) {
-        _verify(
-          isDataItem: isDataItem,
-          id: txId,
-          owner: txOwner,
-          signature: txSignature,
-          target: txTarget,
-          anchor: txAnchor,
-          tags: txTags,
-          dataStream:
-              verificationStream.map((list) => Uint8List.fromList(list)),
-          reward: txReward,
-          quantity: txQuantity,
-          dataSize: txDataSize,
-        ).then((isVerified) {
-          if (!isVerified) {
-            controller.addError('failed to verify transaction');
-          }
-
-          controller.close();
-          subscription?.cancel();
-
-          if (onProgress != null) {
-            progressTimer.cancel();
-          }
-        });
-      }
-
-      subscription = downloadStream.listen(
-        (List<int> chunk) {
-          bytesDownloaded += chunk.length;
-          controller.sink.add(chunk);
-        },
-        cancelOnError: true,
-        onError: (e) {
-          print('[arweave]: Error downloading $txId');
-
-          controller.addError(e);
-          controller.close();
-        },
-      );
-    } catch (e) {
-      print('Error downloading $txId');
-      controller.addError(e);
+    if (onProgress != null) {
+      progressTimer = setProgressTimer(onProgress);
     }
+    final request = Request('GET', Uri.parse(downloadUrl));
+    if (startByte > 0) {
+      request.headers['Range'] = 'bytes=$startByte-';
+    }
+    final client = getClient();
+    final streamResponse = await client.send(request);
+
+    final splitStream = StreamSplitter(streamResponse.stream);
+    final downloadStream = splitStream.split();
+    final verificationStream = splitStream.split();
+
+    // Calling `close()` indicates that no further streams will be created,
+    // causing splitStream to function without an internal buffer.
+    // The future will be completed when both streams are consumed, so we
+    // shouldn't await it here.
+    unawaited(splitStream.close());
+
+    if (verifyDownload) {
+      _verify(
+        isDataItem: isDataItem,
+        id: txId,
+        owner: txOwner,
+        signature: txSignature,
+        target: txTarget,
+        anchor: txAnchor,
+        tags: txTags,
+        dataStream: verificationStream.map((list) => Uint8List.fromList(list)),
+        reward: txReward,
+        quantity: txQuantity,
+        dataSize: txDataSize,
+      ).then((isVerified) {
+        if (!isVerified) {
+          controller.addError('failed to verify transaction');
+        }
+
+        controller.close();
+        subscription?.cancel();
+
+        if (onProgress != null) {
+          progressTimer.cancel();
+        }
+      });
+    }
+
+    subscription = downloadStream.listen(
+      (List<int> chunk) {
+        bytesDownloaded += chunk.length;
+        controller.sink.add(chunk);
+      },
+      cancelOnError: true,
+      onError: (e) {
+        print('[arweave]: Error downloading $txId');
+
+        controller.addError(e);
+        controller.close();
+      },
+    );
   }
 
   // TODO: expose pause and resume after implementing them for verification

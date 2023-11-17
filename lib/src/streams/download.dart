@@ -20,45 +20,23 @@ Future<
   bool verifyDownload = true,
 }) async {
   final downloadUrl = "https://$gatewayHost/$txId";
-  final gqlUrl = "https://$gatewayHost/graphql";
-
-  final gqlResponse = await post(
-    Uri.parse(gqlUrl),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'query': gqlGetTxInfo(txId)}),
-  );
-
-  if (gqlResponse.statusCode != 200) {
-    throw Exception('Failed to download $txId');
-  }
-
-  var txData = jsonDecode(gqlResponse.body)['data']['transaction'];
-
-  final txAnchor = txData['anchor'];
-  final txOwner = txData['owner']['key'];
-  final txTarget = txData['recipient'];
-  final txSignature = txData['signature'];
-  final txDataSize = int.parse(txData['data']['size']);
-  final isDataItem = txData['bundledIn'] != null;
-  final txQuantity = int.parse(txData['quantity']['winston']);
-  final txReward = int.parse(txData['fee']['winston']);
-  final downloadedTags = txData['tags'];
-  final List<Tag> txTags = [];
-  for (var tag in downloadedTags) {
-    txTags.add(createTag(tag['name'], tag['value']));
-  }
 
   int bytesDownloaded = 0;
   StreamSubscription<List<int>>? subscription;
   final controller = StreamController<List<int>>();
+
+  final txData = await _getTransactionData(
+    txId: txId,
+    gatewayHost: gatewayHost!,
+  );
 
   // keep track of progress and download speed
   int lastBytes = 0;
   setProgressTimer(onProgress) => Timer.periodic(
         Duration(milliseconds: 500),
         (Timer timer) {
-          double progress =
-              double.parse((bytesDownloaded / txDataSize).toStringAsFixed(2));
+          double progress = double.parse(
+              (bytesDownloaded / txData.dataSize).toStringAsFixed(2));
           int speed = bytesDownloaded - lastBytes;
 
           onProgress(
@@ -81,31 +59,27 @@ Future<
     final client = getClient();
     final streamResponse = await client.send(request);
 
-    final splitStream = StreamSplitter(streamResponse.stream);
-    final downloadStream = splitStream.split();
-    final verificationStream = splitStream.split();
-
-    // Calling `close()` indicates that no further streams will be created,
-    // causing splitStream to function without an internal buffer.
-    // The future will be completed when both streams are consumed, so we
-    // shouldn't await it here.
-    unawaited(splitStream.close());
+    Stream<List<int>> downloadStream;
 
     if (verifyDownload) {
+      final splitStream = StreamSplitter(streamResponse.stream);
+
+      downloadStream = splitStream.split();
+      final verificationStream = splitStream.split();
+
+      // Calling `close()` indicates that no further streams will be created,
+      // causing splitStream to function without an internal buffer.
+      // The future will be completed when both streams are consumed, so we
+      // shouldn't await it here.
+      unawaited(splitStream.close());
+
       _verify(
-        isDataItem: isDataItem,
-        id: txId,
-        owner: txOwner,
-        signature: txSignature,
-        target: txTarget,
-        anchor: txAnchor,
-        tags: txTags,
-        dataStream: verificationStream.map((list) => Uint8List.fromList(list)),
-        reward: txReward,
-        quantity: txQuantity,
-        dataSize: txDataSize,
+        dataStream: verificationStream,
+        txData: txData,
+        txId: txId,
       ).then((isVerified) {
         if (!isVerified) {
+          // TODO: maybe using a custom Exception here would be better? e.g. ValidationException
           controller.addError('failed to verify transaction');
         }
 
@@ -116,6 +90,10 @@ Future<
           progressTimer.cancel();
         }
       });
+    } else {
+      /// If we don't need to verify the download, we can just return the
+      /// stream directly.
+      downloadStream = streamResponse.stream;
     }
 
     subscription = downloadStream.listen(
@@ -159,40 +137,91 @@ Future<
   return (controller.stream, cancelDownload);
 }
 
-_verify({
-  required bool isDataItem,
-  required String id,
-  required String owner,
-  required String signature,
-  required String target,
-  required String anchor,
-  required List<Tag> tags,
+// TODO: maybe move this to a separate file? An utils file maybe?
+// We problably have the same logic on ardrive-app project. Maybe we can
+// create a package with this logic and use it on both projects.
+Future<TransactionData> _getTransactionData({
+  required String txId,
+  required String gatewayHost,
+}) async {
+  final gqlUrl = "https://$gatewayHost/graphql";
+
+  final gqlResponse = await post(
+    Uri.parse(gqlUrl),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'query': gqlGetTxInfo(txId)}),
+  );
+
+  if (gqlResponse.statusCode != 200) {
+    throw Exception('Failed to download $txId');
+  }
+
+  var txDataJson = jsonDecode(gqlResponse.body)['data']['transaction'];
+
+  return TransactionData.fromJson(txDataJson);
+}
+
+Future<bool> _verify({
+  required TransactionData txData,
+  required String txId,
   required Stream<List<int>> dataStream,
-  required int reward,
-  required int quantity,
-  required int dataSize,
 }) {
-  if (isDataItem) {
+  if (txData.isDataItem) {
     return verifyDataItem(
-        id: id,
-        owner: owner,
-        signature: signature,
-        target: target,
-        anchor: anchor,
-        tags: tags,
+        id: txId,
+        owner: txData.owner,
+        signature: txData.signature,
+        target: txData.target,
+        anchor: txData.anchor,
+        tags: txData.tags,
         dataStream: dataStream.map((list) => Uint8List.fromList(list)));
   } else {
     return verifyTransaction(
-      id: id,
-      owner: owner,
-      signature: signature,
-      target: target,
-      anchor: anchor,
-      tags: tags,
-      reward: reward,
-      quantity: quantity,
-      dataSize: dataSize,
+      id: txId,
+      owner: txData.owner,
+      signature: txData.signature,
+      target: txData.target,
+      anchor: txData.anchor,
+      tags: txData.tags,
+      reward: txData.reward,
+      quantity: txData.quantity,
+      dataSize: txData.dataSize,
       dataStream: dataStream.map((list) => Uint8List.fromList(list)),
     );
+  }
+}
+
+class TransactionData {
+  late String anchor;
+  late String owner;
+  late String target;
+  late String signature;
+  late int dataSize;
+  late bool isDataItem;
+  late int quantity;
+  late int reward;
+  late List<Tag> tags;
+
+  TransactionData.fromJson(Map<String, dynamic> json) {
+    parseData(json);
+  }
+
+  void parseData(Map<String, dynamic> jsonData) {
+    var txData = jsonData['transaction'];
+
+    anchor = txData['anchor'];
+    owner = txData['owner']['key'];
+    target = txData['recipient'];
+    signature = txData['signature'];
+    dataSize = int.parse(txData['data']['size']);
+    isDataItem = txData['bundledIn'] != null;
+    quantity = int.parse(txData['quantity']['winston']);
+    reward = int.parse(txData['fee']['winston']);
+
+    var downloadedTags = txData['tags'];
+    tags = [];
+    for (var tag in downloadedTags) {
+      tags.add(createTag(tag['name'], tag['value']));
+    }
   }
 }

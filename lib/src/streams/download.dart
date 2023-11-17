@@ -85,10 +85,6 @@ Future<
 
         controller.close();
         subscription?.cancel();
-
-        if (onProgress != null) {
-          progressTimer.cancel();
-        }
       });
     } else {
       /// If we don't need to verify the download, we can just return the
@@ -106,6 +102,17 @@ Future<
         print('[arweave]: Error downloading $txId');
 
         controller.addError(e);
+        controller.close();
+
+        if (onProgress != null) {
+          progressTimer.cancel();
+        }
+      },
+      onDone: () {
+        if (onProgress != null) {
+          progressTimer.cancel();
+        }
+
         controller.close();
       },
     );

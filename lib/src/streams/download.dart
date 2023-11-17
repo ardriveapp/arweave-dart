@@ -207,18 +207,16 @@ class TransactionData {
   }
 
   void parseData(Map<String, dynamic> jsonData) {
-    var txData = jsonData['transaction'];
+    anchor = jsonData['anchor'];
+    owner = jsonData['owner']['key'];
+    target = jsonData['recipient'];
+    signature = jsonData['signature'];
+    dataSize = int.parse(jsonData['data']['size']);
+    isDataItem = jsonData['bundledIn'] != null;
+    quantity = int.parse(jsonData['quantity']['winston']);
+    reward = int.parse(jsonData['fee']['winston']);
 
-    anchor = txData['anchor'];
-    owner = txData['owner']['key'];
-    target = txData['recipient'];
-    signature = txData['signature'];
-    dataSize = int.parse(txData['data']['size']);
-    isDataItem = txData['bundledIn'] != null;
-    quantity = int.parse(txData['quantity']['winston']);
-    reward = int.parse(txData['fee']['winston']);
-
-    var downloadedTags = txData['tags'];
+    var downloadedTags = jsonData['tags'];
     tags = [];
     for (var tag in downloadedTags) {
       tags.add(createTag(tag['name'], tag['value']));

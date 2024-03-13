@@ -26,6 +26,6 @@ class ArweaveApi {
       Uri.parse('${gatewayUrl.origin}/$endpoint');
 
   Uri _getSandboxedEndpointUri(String txId) => Uri.parse(
-        '${gatewayUrl.scheme}://${getSandboxSubdomain(txId)}.${gatewayUrl.host}/$txId',
+        '${gatewayUrl.scheme}://${getSandboxSubdomain(txId)}.${gatewayUrl.host}:${gatewayUrl.port}/$txId',
       );
 }

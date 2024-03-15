@@ -21,7 +21,7 @@ void main() async {
     ..addTag('MyTag', '0')
     ..addTag('OtherTag', 'Foo');
 
-  await dataItem.sign(wallet);
+  await dataItem.sign(ArweaveSigner(wallet));
 
   // Prepare a data bundle transaction.
   final transaction = await client.transactions.prepare(
@@ -31,7 +31,7 @@ void main() async {
   );
 
   // Sign the bundle transaction.
-  await transaction.sign(wallet);
+  await transaction.sign(ArweaveSigner(wallet));
 
   // Upload the transaction.
   await client.transactions.post(transaction);

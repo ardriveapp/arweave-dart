@@ -3,6 +3,7 @@ import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:arweave/src/crypto/hmac_drbg_secure_random.dart';
+import 'package:arweave/src/signature_config.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:cryptography/cryptography.dart' hide SecureRandom;
 import 'package:jwk/jwk.dart';
@@ -75,6 +76,8 @@ class Wallet {
 
   Future<Uint8List> sign(Uint8List message) async =>
       rsaPssSign(message: message, keyPair: _keyPair!);
+
+  SignatureConfig getSignatureConfig() => SignatureConfig.arweave;
 
   factory Wallet.fromJwk(Map<String, dynamic> jwk) {
     // Normalize the JWK so that it can be decoded by 'cryptography'.

@@ -2,17 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
+import 'package:arweave/src/utils.dart';
 import 'package:arweave/src/utils/bundle_tag_parser.dart';
 import 'package:arweave/utils.dart';
 import 'package:async/async.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../crypto/crypto.dart';
-import '../models/models.dart';
-import 'data_models.dart';
 import 'errors.dart';
-import 'utils.dart';
-import 'deep_hash_stream.dart';
 
 DataItemTaskEither createDataItemTaskEither({
   required final Wallet wallet,
@@ -80,6 +78,7 @@ Future<ProcessedDataItem> processDataItem({
   required Stream<Uint8List> Function() dataItemStreamGenerator,
   required String id,
   required int length,
+  required SignatureConfig signatureConfig,
 }) async {
   int byteIndex = 0;
   final reader = ChunkedStreamReader(dataItemStreamGenerator());
@@ -89,12 +88,12 @@ Future<ProcessedDataItem> processDataItem({
   byteIndex += 2;
 
   // get signature
-  final signature = await reader.readBytes(512);
-  byteIndex += 512;
+  final signature = await reader.readBytes(signatureConfig.signatureLength);
+  byteIndex += signatureConfig.signatureLength;
 
   // get owner
-  final owner = await reader.readChunk(512);
-  byteIndex += 512;
+  final owner = await reader.readChunk(signatureConfig.publicKeyLength);
+  byteIndex += signatureConfig.publicKeyLength;
 
   // get target
   final targetExists = (await reader.readChunk(1))[0] == 1;
@@ -156,12 +155,8 @@ Future<ProcessedDataItem> processDataItem({
     throw Exception("ID doesn't match signature");
   }
 
-  final signVerification = await rsaPssVerify(
-    input: signatureData,
-    signature: signature,
-    modulus: decodeBytesToBigInt(owner),
-    publicExponent: publicExponent,
-  );
+  final signVerification = await signatureConfig.verify(
+      signatureData, signature, encodeBytesToBase64(owner));
 
   if (!signVerification) {
     throw Exception("Invalid signature");

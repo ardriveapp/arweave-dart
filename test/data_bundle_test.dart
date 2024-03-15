@@ -16,6 +16,7 @@ void main() async {
   group('DataItem:', () {
     test('create, sign, and verify data item', () async {
       final wallet = getTestWallet();
+      final signer = ArweaveSigner(wallet);
       final dataItem = DataItem.withBlobData(
           owner: await wallet.getOwner(),
           data: utf8.encode('HELLOWORLD_TEST_STRING') as Uint8List)
@@ -23,13 +24,14 @@ void main() async {
         ..addTag('OtherTag', 'Foo')
         ..addTag('MyTag', '1');
 
-      await dataItem.sign(wallet);
+      await dataItem.sign(signer);
 
       expect(await dataItem.verify(), isTrue);
     });
 
     test('confirm data item with wrong signaure fails verify', () async {
       final wallet = getTestWallet();
+      final signer = ArweaveSigner(wallet);
       final dataItem = DataItem.withBlobData(
           owner: await wallet.getOwner(),
           data: utf8.encode('HELLOWORLD_TEST_STRING') as Uint8List)
@@ -37,7 +39,7 @@ void main() async {
         ..addTag('OtherTag', 'Foo')
         ..addTag('MyTag', '1');
 
-      await dataItem.sign(wallet);
+      await dataItem.sign(signer);
       dataItem.addTag('MyTag', '2');
 
       expect(await dataItem.verify(), isFalse);
@@ -46,6 +48,7 @@ void main() async {
 
   test('create data bundle', () async {
     final wallet = getTestWallet();
+    final signer = ArweaveSigner(wallet);
 
     final dataItemOne = DataItem.withBlobData(
         owner: await wallet.getOwner(),
@@ -53,14 +56,14 @@ void main() async {
       ..addTag('MyTag', '0')
       ..addTag('OtherTag', 'Foo')
       ..addTag('MyTag', '1');
-    await dataItemOne.sign(wallet);
+    await dataItemOne.sign(signer);
     final dataItemTwo = DataItem.withBlobData(
         owner: await wallet.getOwner(),
         data: utf8.encode('HELLOWORLD_TEST_STRING_2') as Uint8List)
       ..addTag('MyTag', '0')
       ..addTag('OtherTag', 'Foo')
       ..addTag('MyTag', '1');
-    await dataItemTwo.sign(wallet);
+    await dataItemTwo.sign(signer);
     final items = [dataItemOne, dataItemTwo];
     final bundle = await DataBundle.fromDataItems(items: items);
     expect(bundle.blob, isNotEmpty);
@@ -71,6 +74,7 @@ void main() async {
 
   test('create data bundle with large files', () async {
     final wallet = getTestWallet();
+    final signer = ArweaveSigner(wallet);
     final testData = generateByteList(5);
 
     expect(await deepHash([testData]), equals(testFileHash));
@@ -80,14 +84,14 @@ void main() async {
           ..addTag('MyTag', '0')
           ..addTag('OtherTag', 'Foo')
           ..addTag('MyTag', '1');
-    await dataItemOne.sign(wallet);
+    await dataItemOne.sign(signer);
 
     final dataItemTwo =
         DataItem.withBlobData(owner: await wallet.getOwner(), data: testData)
           ..addTag('MyTag', '0')
           ..addTag('OtherTag', 'Foo')
           ..addTag('MyTag', '1');
-    await dataItemTwo.sign(wallet);
+    await dataItemTwo.sign(signer);
 
     final items = [dataItemOne, dataItemTwo];
     final bundle = await DataBundle.fromDataItems(items: items);

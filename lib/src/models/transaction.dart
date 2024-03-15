@@ -66,6 +66,10 @@ class Transaction implements TransactionBase {
   String get signature => _signature;
   late String _signature;
 
+  @override
+  SignatureConfig? get signatureConfig => _signatureConfig;
+  late SignatureConfig _signatureConfig;
+
   @JsonKey(ignore: true)
   TransactionChunksWithProofs? get chunks => _chunks;
   TransactionChunksWithProofs? _chunks;
@@ -287,11 +291,13 @@ class Transaction implements TransactionBase {
   }
 
   @override
-  Future<void> sign(Wallet wallet) async {
+  Future<void> sign(Signer signer) async {
     final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+
+    final rawSignature = await signer.sign(signatureData);
 
     _signature = encodeBytesToBase64(rawSignature);
+    _signatureConfig = signer.signatureConfig;
 
     final idHash = await sha256.hash(rawSignature);
     _id = encodeBytesToBase64(idHash.bytes);
@@ -308,12 +314,8 @@ class Transaction implements TransactionBase {
 
       if (id != expectedId) return false;
 
-      return rsaPssVerify(
-        input: signatureData,
-        signature: claimedSignatureBytes,
-        modulus: decodeBase64ToBigInt(owner!),
-        publicExponent: publicExponent,
-      );
+      return signatureConfig!
+          .verify(signatureData, claimedSignatureBytes, owner!);
     } catch (_) {
       return false;
     }

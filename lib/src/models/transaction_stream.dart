@@ -6,7 +6,6 @@ import 'package:async/async.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import '../crypto/crypto.dart';
-import '../streams/data_models.dart';
 import '../utils.dart';
 
 part 'transaction_stream.g.dart';
@@ -73,6 +72,10 @@ class TransactionStream implements Transaction {
   @override
   String get signature => _signature;
   late String _signature;
+
+  @override
+  SignatureConfig? get signatureConfig => _signatureConfig;
+  late SignatureConfig _signatureConfig;
 
   @JsonKey(ignore: true)
   TransactionChunksWithProofs? get chunks => _chunks;
@@ -298,11 +301,12 @@ class TransactionStream implements Transaction {
   }
 
   @override
-  Future<void> sign(Wallet wallet) async {
+  Future<void> sign(Signer signer) async {
     final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+    final rawSignature = await signer.sign(signatureData);
 
     _signature = encodeBytesToBase64(rawSignature);
+    _signatureConfig = signer.signatureConfig;
 
     final idHash = await sha256.hash(rawSignature);
     _id = encodeBytesToBase64(idHash.bytes);
@@ -319,12 +323,8 @@ class TransactionStream implements Transaction {
 
       if (id != expectedId) return false;
 
-      return rsaPssVerify(
-        input: signatureData,
-        signature: claimedSignatureBytes,
-        modulus: decodeBase64ToBigInt(owner!),
-        publicExponent: publicExponent,
-      );
+      return signatureConfig!
+          .verify(signatureData, claimedSignatureBytes, owner!);
     } catch (_) {
       return false;
     }

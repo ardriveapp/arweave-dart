@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:arweave/src/signer.dart';
 import 'package:arweave/src/streams/data_item.dart';
 import 'package:arweave/src/streams/data_models.dart';
 import 'package:arweave/src/streams/errors.dart';
 import 'package:arweave/src/streams/utils.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:test/test.dart';
-import 'fixtures/test_wallet.dart';
+
 import 'deserialize_tags.dart' if (dart.library.io) 'deserialize_tags_io.dart';
+import 'fixtures/test_wallet.dart';
 
 void main() async {
   final wallet = getTestWallet();
@@ -147,6 +149,7 @@ void main() async {
         dataStream: dataStreamGenerator,
         dataStreamSize: data.length,
       );
+      final signer = ArweaveSigner(wallet);
 
       final dataItemTask = await dataItemTaskEither.run();
 
@@ -159,6 +162,7 @@ void main() async {
           dataItemStreamGenerator: dataItem.streamGenerator,
           id: dataItem.id,
           length: dataItem.dataItemSize,
+          signatureConfig: signer.signatureConfig,
         );
 
         expect(processedDataItem.id, expectedDataItemId);
@@ -185,6 +189,7 @@ void main() async {
         dataStream: dataStreamGenerator,
         dataStreamSize: data.length,
       );
+      final signer = ArweaveSigner(wallet);
 
       final dataItemTask = await dataItemTaskEither.run();
 
@@ -197,6 +202,7 @@ void main() async {
           dataItemStreamGenerator: dataItem.streamGenerator,
           id: dataItem.id,
           length: dataItem.dataItemSize,
+          signatureConfig: signer.signatureConfig,
         );
         final deserializedTags =
             deserializeTags(buffer: processedDataItem.tags);

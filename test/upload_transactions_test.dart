@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
+import 'package:arweave/src/signer.dart';
 import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
@@ -34,6 +35,7 @@ void main() {
 
     test('successfully upload AR only transaction', () async {
       final wallet = await getTestWallet();
+      final signer = ArweaveSigner(wallet);
 
       final transaction = await client.transactions.prepare(
         Transaction(
@@ -43,7 +45,7 @@ void main() {
         wallet,
       );
 
-      await transaction.sign(wallet);
+      await transaction.sign(signer);
 
       expect(
         client.transactions.upload(transaction),

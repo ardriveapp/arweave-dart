@@ -22,7 +22,7 @@ void main() async {
     ..addTag('App-Version', '1.0.0');
 
   // Sign the transaction.
-  await transaction.sign(wallet);
+  await transaction.sign(ArweaveSigner(wallet));
 
   // Upload the transaction in a single call:
   await client.transactions.post(transaction);

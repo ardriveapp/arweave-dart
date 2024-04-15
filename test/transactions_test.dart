@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:arweave/arweave.dart';
+import 'package:arweave/src/signer.dart';
 import 'package:arweave/utils.dart' as utils;
 import 'package:test/test.dart';
 
@@ -20,6 +21,7 @@ void main() {
 
     test('create, sign, and verify data transaction', () async {
       final wallet = await getTestWallet();
+      final signer = ArweaveSigner(wallet);
 
       final transaction = await client.transactions.prepare(
           Transaction.withBlobData(data: utf8.encode('test') as Uint8List),
@@ -34,7 +36,7 @@ void main() {
       expect(transaction.lastTx, matches(transactionFieldPattern));
       expect(transaction.reward.toInt(), greaterThan(0));
 
-      await transaction.sign(wallet);
+      await transaction.sign(signer);
 
       expect(transaction.signature, matches(signaturePattern));
       expect(transaction.id, matches(digestPattern));
@@ -49,6 +51,7 @@ void main() {
 
     test('create, sign, and verify AR transaction', () async {
       final wallet = await getTestWallet();
+      final signer = ArweaveSigner(wallet);
 
       final transaction = await client.transactions.prepare(
         Transaction(
@@ -61,7 +64,7 @@ void main() {
       expect(transaction.target,
           equals('GRQ7swQO1AMyFgnuAPI7AvGQlW3lzuQuwlJbIpWV7xk'));
 
-      await transaction.sign(wallet);
+      await transaction.sign(signer);
 
       expect(transaction.signature, matches(signaturePattern));
       expect(transaction.id, matches(digestPattern));
@@ -75,6 +78,7 @@ void main() {
 
     test('sign v2 transaction', () async {
       final wallet = await getTestWallet();
+      final signer = ArweaveSigner(wallet);
       final signedV2Tx =
           await getTestTransaction('test/fixtures/signed_v2_tx.json');
       final unsignedV2Tx =
@@ -90,7 +94,7 @@ void main() {
 
       tx.setLastTx('');
 
-      await tx.sign(wallet);
+      await tx.sign(signer);
 
       expect(tx.dataRoot, signedV2Tx.dataRoot);
       expect(tx.signature, signedV2Tx.signature);
@@ -159,6 +163,7 @@ void main() {
     group('stream', (() {
       test('create, sign, and verify data transaction', () async {
         final wallet = await getTestWallet();
+        final signer = ArweaveSigner(wallet);
 
         const fileName = 'test/fixtures/lotsofdata.bin';
         final fileStreamMeta = await getFileStreamMeta(fileName);
@@ -179,7 +184,7 @@ void main() {
         expect(transaction.lastTx, matches(transactionFieldPattern));
         expect(transaction.reward.toInt(), greaterThan(0));
 
-        await transaction.sign(wallet);
+        await transaction.sign(signer);
 
         expect(transaction.signature, matches(signaturePattern));
         expect(transaction.id, matches(digestPattern));

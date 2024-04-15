@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:arweave/src/utils/bundle_tag_parser.dart';
 
 import '../crypto/crypto.dart';
 import '../utils.dart';
-import 'models.dart';
-
-final MIN_BINARY_SIZE = 1044;
 
 /// ANS-104 [DataItem]
 /// Spec: https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md
@@ -38,6 +36,10 @@ class DataItem implements TransactionBase {
   String get signature => _signature;
   late String _signature;
   late ByteBuffer binary;
+
+  @override
+  SignatureConfig? get signatureConfig => _signatureConfig;
+  late SignatureConfig _signatureConfig;
 
   /// This constructor is reserved for JSON serialisation.
   ///
@@ -103,24 +105,30 @@ class DataItem implements TransactionBase {
   }
 
   @override
-  Future<Uint8List> getSignatureData() => deepHash(
-        [
-          utf8.encode('dataitem'),
-          utf8.encode('1'), //Transaction format
-          utf8.encode('1'), //Signature type
-          decodeBase64ToBytes(owner),
-          decodeBase64ToBytes(target),
-          decodeBase64ToBytes(nonce),
-          serializeTags(tags: tags),
-          data,
-        ],
-      );
+  Future<Uint8List> getSignatureData() {
+    print(
+        'DataItem signatureType ${signatureConfig!.signatureType.toString()}');
+    return deepHash(
+      [
+        utf8.encode('dataitem'),
+        utf8.encode('1'), //Transaction format
+        utf8.encode(signatureConfig!.signatureType.toString()), //Signature type
+        decodeBase64ToBytes(owner),
+        decodeBase64ToBytes(target),
+        decodeBase64ToBytes(nonce),
+        serializeTags(tags: tags),
+        data,
+      ],
+    );
+  }
 
   /// Signs the [DataItem] using the specified wallet and sets the `id` and `signature` appropriately.
   @override
-  Future<Uint8List> sign(Wallet wallet) async {
+  Future<Uint8List> sign(Signer signer) async {
+    _signatureConfig = signer.signatureConfig;
+
     final signatureData = await getSignatureData();
-    final rawSignature = await wallet.sign(signatureData);
+    final rawSignature = await signer.sign(signatureData);
 
     _signature = encodeBytesToBase64(rawSignature);
 
@@ -136,8 +144,8 @@ class DataItem implements TransactionBase {
     final serializedTags = serializeTags(tags: tags);
     final tagsLength = 16 + serializedTags.lengthInBytes;
 
-    const arweaveSignerLength = 512;
-    const ownerLength = 512;
+    final arweaveSignerLength = signatureConfig!.signatureLength;
+    final ownerLength = signatureConfig!.publicKeyLength;
 
     const signatureTypeLength = 2;
 
@@ -158,23 +166,34 @@ class DataItem implements TransactionBase {
   Future<bool> verify() async {
     final buffer = (await asBinary()).toBytes().buffer;
     try {
-      if (buffer.lengthInBytes < MIN_BINARY_SIZE) {
+      // NOTE: This was previously hardcoded to 1044, using calculation here
+      // factoring in singnatureConfig, but this value should be checked
+      final minBinarySize = 20 +
+          signatureConfig!.signatureLength +
+          signatureConfig!.publicKeyLength;
+
+      if (buffer.lengthInBytes < minBinarySize) {
         return false;
       }
       final sigType = byteArrayToLong(buffer.asUint8List().sublist(0, 2));
-      assert(sigType == 1);
-      var tagsStart = 2 + 512 + 512 + 2;
-      final targetPresent = buffer.asUint8List()[1026] == 1;
-      tagsStart += targetPresent ? 32 : 0;
-      final anchorPresentByte = targetPresent ? 1059 : 1027;
-      final anchorPresent = buffer.asUint8List()[anchorPresentByte] == 1;
-      tagsStart += anchorPresent ? 32 : 0;
+      assert(sigType == signatureConfig!.signatureType);
+
+      final targetStart = 2 +
+          signatureConfig!.signatureLength +
+          signatureConfig!.publicKeyLength;
+      final targetPresent = buffer.asUint8List()[targetStart] == 1;
+      final anchorStart = targetStart + (targetPresent ? 33 : 1);
+      final anchorPresent = buffer.asUint8List()[anchorStart] == 1;
+
+      final tagsStart = anchorStart + (anchorPresent ? 33 : 1);
 
       final numberOfTags = byteArrayToLong(
           buffer.asUint8List().sublist(tagsStart, tagsStart + 8));
-      final numberOfTagBytesArray =
-          buffer.asUint8List().sublist(tagsStart + 8, tagsStart + 16);
-      final numberOfTagBytes = byteArrayToLong(numberOfTagBytesArray);
+
+      // FIXME: This is not being verified
+      // final numberOfTagBytesArray =
+      //     buffer.asUint8List().sublist(tagsStart + 8, tagsStart + 16);
+      // final numberOfTagBytes = byteArrayToLong(numberOfTagBytesArray);
 
       if (numberOfTags > 0) {
         try {
@@ -195,12 +214,8 @@ class DataItem implements TransactionBase {
 
       if (id != expectedId) return false;
 
-      return rsaPssVerify(
-        input: signatureData,
-        signature: claimedSignatureBytes,
-        modulus: decodeBase64ToBigInt(owner),
-        publicExponent: publicExponent,
-      );
+      return signatureConfig!
+          .verify(signatureData, claimedSignatureBytes, owner);
     } catch (_) {
       return false;
     }
@@ -217,12 +232,13 @@ class DataItem implements TransactionBase {
   }
 
   int getTagsStart() {
-    var tagsStart = 2 + 512 + 512 + 2;
-    var targetPresent = binary.asUint8List()[1026] == 1;
-    tagsStart += targetPresent ? 32 : 0;
-    var anchorPresentByte = targetPresent ? 1059 : 1027;
-    var anchorPresent = binary.asUint8List()[anchorPresentByte] == 1;
-    tagsStart += anchorPresent ? 32 : 0;
+    final targetStart =
+        2 + signatureConfig!.signatureLength + signatureConfig!.publicKeyLength;
+    final targetPresent = binary.asUint8List()[targetStart] == 1;
+    final anchorStart = targetStart + (targetPresent ? 33 : 1);
+    final anchorPresent = binary.asUint8List()[anchorStart] == 1;
+
+    final tagsStart = anchorStart + (anchorPresent ? 33 : 1);
 
     return tagsStart;
   }
@@ -240,14 +256,16 @@ class DataItem implements TransactionBase {
 
   // Returns the start byte of the tags section (number of tags)
   int getTargetStart() {
-    return 1026;
+    return 2 +
+        signatureConfig!.signatureLength +
+        signatureConfig!.publicKeyLength;
   }
 
   // Returns the start byte of the tags section (number of tags)
   int getAnchorStart() {
-    var anchorStart = getTargetStart() + 1;
+    var anchorStart = getTargetStart();
     final targetPresent = binary.asUint8List()[getTargetStart()] == 1;
-    anchorStart += targetPresent ? 32 : 0;
+    anchorStart += targetPresent ? 33 : 1;
 
     return anchorStart;
   }
@@ -259,10 +277,11 @@ class DataItem implements TransactionBase {
     final tags = serializeTags(tags: this.tags);
 
     // See [https://github.com/joshbenaron/arweave-standards/blob/ans104/ans/ANS-104.md#13-dataitem-format]
-    assert(decodedOwner.buffer.lengthInBytes == 512);
+    assert(
+        decodedOwner.buffer.lengthInBytes == signatureConfig!.publicKeyLength);
     final bytesBuilder = BytesBuilder();
 
-    bytesBuilder.add(shortTo2ByteArray(1));
+    bytesBuilder.add(shortTo2ByteArray(signatureConfig!.signatureType));
     bytesBuilder.add(decodeBase64ToBytes(signature));
     bytesBuilder.add(decodedOwner);
     bytesBuilder.addByte(decodedTarget.isNotEmpty ? 1 : 0);

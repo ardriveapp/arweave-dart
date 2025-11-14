@@ -101,6 +101,97 @@ void main() {
     }, onPlatform: {
       'browser': Skip('TODO: implement this test for browser'),
     });
+
+    test('sign callback is invoked when signing', () async {
+      String? capturedMessage;
+      String? capturedContext;
+
+      final wallet = await getTestWallet();
+      final walletWithCallback = Wallet.fromJwk(
+        wallet.toJwk(),
+        onSign: (message, context) {
+          capturedMessage = message;
+          capturedContext = context;
+        },
+      );
+
+      final message = utf8.encode('<test message>');
+      await walletWithCallback.sign(message as Uint8List, 'test-context');
+
+      expect(capturedMessage, equals('Signing ${message.length} bytes'));
+      expect(capturedContext, equals('test-context'));
+    }, onPlatform: {
+      'browser': Skip('dart:io unavailable'),
+    });
+
+    test('sign callback receives null context when not provided', () async {
+      String? capturedMessage;
+      String? capturedContext;
+
+      final wallet = await getTestWallet();
+      final walletWithCallback = Wallet.fromJwk(
+        wallet.toJwk(),
+        onSign: (message, context) {
+          capturedMessage = message;
+          capturedContext = context;
+        },
+      );
+
+      final message = utf8.encode('<test message>');
+      await walletWithCallback.sign(message as Uint8List);
+
+      expect(capturedMessage, equals('Signing ${message.length} bytes'));
+      expect(capturedContext, isNull);
+    }, onPlatform: {
+      'browser': Skip('dart:io unavailable'),
+    });
+
+    test('wallet without callback works normally (backwards compatibility)',
+        () async {
+      final wallet = await getTestWallet();
+      final message = utf8.encode('<test message>');
+
+      // Should not throw even without onSign callback
+      final signature = await wallet.sign(message as Uint8List);
+      expect(signature, isNotEmpty);
+    }, onPlatform: {
+      'browser': Skip('dart:io unavailable'),
+    });
+
+    test('generate() accepts onSign callback', () async {
+      bool callbackInvoked = false;
+
+      final wallet = await Wallet.generate(
+        onSign: (message, context) {
+          callbackInvoked = true;
+        },
+      );
+
+      final message = utf8.encode('<test message>');
+      await wallet.sign(message as Uint8List);
+
+      expect(callbackInvoked, isTrue);
+    }, onPlatform: {
+      'browser': Skip('TODO: implement this test for browser'),
+    });
+
+    test('createWalletFromMnemonic() accepts onSign callback', () async {
+      bool callbackInvoked = false;
+
+      final wallet = await Wallet.createWalletFromMnemonic(
+        testArweaveAppWalletMnemonic,
+        onSign: (message, context) {
+          callbackInvoked = true;
+        },
+      );
+
+      final message = utf8.encode('<test message>');
+      await wallet.sign(message as Uint8List);
+
+      expect(callbackInvoked, isTrue);
+    }, onPlatform: {
+      'browser': Skip('TODO: implement this test for browser'),
+    });
   });
 
   test('loading wallets with missing dp, dq, and qi will have values generated',

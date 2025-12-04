@@ -26,8 +26,8 @@ const _fatalChunkUploadErrors = [
 ];
 
 TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
-    uploadTransaction(TransactionResult transaction, [Arweave? arweaveClient]) {
-  final arweave = arweaveClient?.api ?? ArweaveApi();
+    uploadTransaction(TransactionResult transaction) {
+  final arweave = ArweaveApi();
   final txHeaders = transaction.toJson();
   final aborter = UploadAborter();
 
@@ -41,7 +41,7 @@ TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
 TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
     ArweaveApi arweave, Map<String, dynamic> headers) {
   return TaskEither.tryCatch(() async {
-    final endpoint = '${arweave.gatewayUrl}/tx';
+    final endpoint = 'https://arweave.net/tx';
     final Dio dio = Dio();
     final res = await dio.post(endpoint, data: json.encode(headers));
 
@@ -89,7 +89,7 @@ Stream<(int, int)> _postChunks(
       while (chunkIndex < totalChunks &&
           chunkIndex < maxConcurrentChunkUploadCount) {
         final chunkUploader =
-            ChunkUploader(transaction, chunkUploadCompletionStreamController, arweave);
+            ChunkUploader(transaction, chunkUploadCompletionStreamController);
 
         aborter.addChunk(chunkUploader);
 
@@ -114,7 +114,7 @@ Stream<(int, int)> _postChunks(
     mutex.protect(() async {
       if (chunkIndex < totalChunks) {
         final chunkUploader =
-            ChunkUploader(transaction, chunkUploadCompletionStreamController, arweave);
+            ChunkUploader(transaction, chunkUploadCompletionStreamController);
         aborter.addChunk(chunkUploader);
 
         chunkUploader
@@ -167,10 +167,9 @@ class UploadAborter {
 class ChunkUploader {
   final TransactionResult transaction;
   final StreamController<int> chunkUploadCompletionStreamController;
-  final ArweaveApi arweave;
   final CancelToken _cancelToken = CancelToken();
 
-  ChunkUploader(this.transaction, this.chunkUploadCompletionStreamController, this.arweave);
+  ChunkUploader(this.transaction, this.chunkUploadCompletionStreamController);
 
   Future<void> uploadChunkAndNotifyOfCompletion(
       int chunkIndex, TransactionChunk chunk) async {
@@ -220,7 +219,7 @@ class ChunkUploader {
     // instance here.
     final dio = Dio();
 
-    final endpoint = '${arweave.gatewayUrl}/chunk';
+    final endpoint = 'https://arweave.net/chunk';
 
     final res = await dio.post(
       endpoint,

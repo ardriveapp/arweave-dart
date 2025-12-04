@@ -13,18 +13,11 @@ import 'package:pointycastle/src/platform_check/platform_check.dart';
 import '../crypto/crypto.dart';
 import '../utils.dart';
 
-/// Callback invoked when a signature operation occurs.
-/// [message] describes the operation (e.g., "Signing 1024 bytes")
-/// [context] provides optional context about what is being signed (e.g., "transaction-metadata", "data-item-abc123")
-typedef SignCallback = void Function(String message, String? context);
-
 class Wallet {
   RsaKeyPair? _keyPair;
-  final SignCallback? onSign;
+  Wallet({KeyPair? keyPair}) : _keyPair = keyPair as RsaKeyPair?;
 
-  Wallet({KeyPair? keyPair, this.onSign}) : _keyPair = keyPair as RsaKeyPair?;
-
-  static Wallet generateWallet(SecureRandom secureRandom, {SignCallback? onSign}) {
+  static Wallet generateWallet(SecureRandom secureRandom) {
     final keyGen = RSAKeyGenerator()
       ..init(
         ParametersWithRandom(
@@ -54,24 +47,23 @@ class Wallet {
             privK.privateExponent! % (privK.q! - BigInt.one)),
         qi: encodeBigIntToBytes(privK.q!.modInverse(privK.p!)),
       ),
-      onSign: onSign,
     );
   }
 
-  static Future<Wallet> generate({SignCallback? onSign}) async {
+  static Future<Wallet> generate() async {
     final FortunaRandom secureRandom = FortunaRandom()
       ..seed(
           KeyParameter(Platform.instance.platformEntropySource().getBytes(32)));
 
-    return generateWallet(secureRandom, onSign: onSign);
+    return generateWallet(secureRandom);
   }
 
-  static Future<Wallet> createWalletFromMnemonic(String mnemonic, {SignCallback? onSign}) async {
+  static Future<Wallet> createWalletFromMnemonic(String mnemonic) async {
     final seed = bip39.mnemonicToSeed(mnemonic);
     final secureRandom = HmacDrbgSecureRandom();
     secureRandom.seed(KeyParameter(seed));
 
-    return generateWallet(secureRandom, onSign: onSign);
+    return generateWallet(secureRandom);
   }
 
   Future<String> getOwner() async => encodeBytesToBase64(
@@ -82,10 +74,8 @@ class Wallet {
 
   Future<String> getAddress() async => ownerToAddress(await getOwner());
 
-  Future<Uint8List> sign(Uint8List message, [String? context]) async {
-    onSign?.call('Signing ${message.length} bytes', context);
-    return rsaPssSign(message: message, keyPair: _keyPair!);
-  }
+  Future<Uint8List> sign(Uint8List message) async =>
+      rsaPssSign(message: message, keyPair: _keyPair!);
 
   Future<Uint8List> signDataItem(DataItem dataItem) async {
     await dataItem.sign(ArweaveSigner(this));
@@ -94,7 +84,7 @@ class Wallet {
 
   SignatureConfig getSignatureConfig() => SignatureConfig.arweave;
 
-  factory Wallet.fromJwk(Map<String, dynamic> jwk, {SignCallback? onSign}) {
+  factory Wallet.fromJwk(Map<String, dynamic> jwk) {
     // Normalize the JWK so that it can be decoded by 'cryptography'.
     jwk = jwk.map((key, value) {
       if (key == 'kty' || value is! String) {
@@ -125,7 +115,7 @@ class Wallet {
       privK = Jwk.fromJson(jwk).toKeyPair() as RsaKeyPairData;
     }
 
-    return Wallet(keyPair: privK, onSign: onSign);
+    return Wallet(keyPair: privK);
   }
 
   Map<String, dynamic> toJwk() => Jwk.fromKeyPair(_keyPair!).toJson().map(

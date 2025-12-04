@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:arweave/src/crypto/hmac_drbg_secure_random.dart';
-import 'package:arweave/src/signature_config.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:cryptography/cryptography.dart' hide SecureRandom;
 import 'package:jwk/jwk.dart';
@@ -76,6 +76,11 @@ class Wallet {
 
   Future<Uint8List> sign(Uint8List message) async =>
       rsaPssSign(message: message, keyPair: _keyPair!);
+
+  Future<Uint8List> signDataItem(DataItem dataItem) async {
+    await dataItem.sign(ArweaveSigner(this));
+    return decodeBase64ToBytes(dataItem.signature);
+  }
 
   SignatureConfig getSignatureConfig() => SignatureConfig.arweave;
 

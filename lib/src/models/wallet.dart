@@ -24,8 +24,7 @@ class Wallet {
 
   Wallet({KeyPair? keyPair, this.onSign}) : _keyPair = keyPair as RsaKeyPair?;
 
-  static Wallet generateWallet(SecureRandom secureRandom,
-      {SignCallback? onSign}) {
+  static Wallet generateWallet(SecureRandom secureRandom, {SignCallback? onSign}) {
     final keyGen = RSAKeyGenerator()
       ..init(
         ParametersWithRandom(
@@ -67,8 +66,7 @@ class Wallet {
     return generateWallet(secureRandom, onSign: onSign);
   }
 
-  static Future<Wallet> createWalletFromMnemonic(String mnemonic,
-      {SignCallback? onSign}) async {
+  static Future<Wallet> createWalletFromMnemonic(String mnemonic, {SignCallback? onSign}) async {
     final seed = bip39.mnemonicToSeed(mnemonic);
     final secureRandom = HmacDrbgSecureRandom();
     secureRandom.seed(KeyParameter(seed));
@@ -87,12 +85,6 @@ class Wallet {
   Future<Uint8List> sign(Uint8List message, [String? context]) async {
     onSign?.call('Signing ${message.length} bytes', context);
     return rsaPssSign(message: message, keyPair: _keyPair!);
-  }
-
-  Future<Uint8List> signDataItem(DataItem dataItem, [String? context]) async {
-    onSign?.call('Signing DataItem ${dataItem.data.length} bytes', context);
-    await dataItem.sign(ArweaveSigner(this));
-    return decodeBase64ToBytes(dataItem.signature);
   }
 
   SignatureConfig getSignatureConfig() => SignatureConfig.arweave;

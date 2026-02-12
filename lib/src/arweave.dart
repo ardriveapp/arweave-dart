@@ -15,9 +15,10 @@ class Arweave {
 
   Arweave({
     Uri? gatewayUrl,
+    ArweaveApi? api,
   }) {
-    _api = ArweaveApi(gatewayUrl: gatewayUrl);
-    _transactions = ArweaveTransactionsApi(api);
-    _chunks = ArweaveChunksApi(api);
+    _api = api ?? ArweaveApi(gatewayUrl: gatewayUrl);
+    _transactions = ArweaveTransactionsApi(this.api);
+    _chunks = ArweaveChunksApi(this.api);
   }
 }

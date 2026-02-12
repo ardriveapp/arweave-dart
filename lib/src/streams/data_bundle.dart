@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -87,9 +88,11 @@ TransactionTaskEither createTransactionTaskEither({
   BigInt? reward,
   required final DataStreamGenerator dataStreamGenerator,
   required final int dataSize,
+  Arweave? arweave,
 }) {
-  return getTxAnchor(anchor).flatMap((anchor) =>
-      getTxPrice(reward, dataSize, target).flatMap((reward) =>
+  final api = arweave?.api;
+  return getTxAnchor(anchor, api: api).flatMap((anchor) =>
+      getTxPrice(reward, dataSize, target, api: api).flatMap((reward) =>
           getOwnerTaskEither(wallet).flatMap((owner) =>
               prepareChunksTaskEither(dataStreamGenerator)
                   .flatMap((chunksWithProofs) {

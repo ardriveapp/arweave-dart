@@ -10,8 +10,9 @@ class ArweaveApi {
 
   ArweaveApi({
     Uri? gatewayUrl,
+    http.Client? client,
   })  : gatewayUrl = gatewayUrl ?? getDefaultGateway(),
-        _client = http.Client();
+        _client = client ?? http.Client();
 
   Future<http.Response> get(String endpoint) =>
       _client.get(_getEndpointUri(endpoint));

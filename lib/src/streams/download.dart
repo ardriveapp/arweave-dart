@@ -16,10 +16,13 @@ Future<
     )> download({
   required String txId,
   String? gatewayHost = 'arweave.net',
+  Arweave? arweave,
   Function(double progress, int speed)? onProgress,
   bool verifyDownload = true,
 }) async {
-  final downloadUrl = "https://$gatewayHost/$txId";
+  final baseUri =
+      arweave?.api.gatewayUrl ?? Uri.parse('https://$gatewayHost');
+  final downloadUrl = '${baseUri.origin}/$txId';
 
   int bytesDownloaded = 0;
   StreamSubscription<List<int>>? subscription;
@@ -27,7 +30,7 @@ Future<
 
   final txData = await _getTransactionData(
     txId: txId,
-    gatewayHost: gatewayHost!,
+    baseUri: baseUri,
   );
 
   // keep track of progress and download speed
@@ -149,9 +152,9 @@ Future<
 // create a package with this logic and use it on both projects.
 Future<TransactionData> _getTransactionData({
   required String txId,
-  required String gatewayHost,
+  required Uri baseUri,
 }) async {
-  final gqlUrl = "https://$gatewayHost/graphql";
+  final gqlUrl = '${baseUri.origin}/graphql';
 
   final gqlResponse = await post(
     Uri.parse(gqlUrl),

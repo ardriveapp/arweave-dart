@@ -242,14 +242,9 @@ Stream<TransactionChunk> getChunks(Stream<Uint8List> dataStream,
 }
 
 TaskEither<StreamTransactionError, String> getTxAnchor(String? anchor,
-    {ArweaveApi? api}) {
+    {required ArweaveApi api}) {
   if (anchor != null) {
     return TaskEither.of(anchor);
-  }
-  // Require explicit api so callers use their configured gateway instead of
-  // silently defaulting to arweave.net.
-  if (api == null) {
-    return TaskEither.left(GatewayNotConfiguredError());
   }
   return TaskEither.tryCatch(() async {
     return await api.get('tx_anchor').then((res) => res.body);
@@ -258,14 +253,9 @@ TaskEither<StreamTransactionError, String> getTxAnchor(String? anchor,
 
 TaskEither<StreamTransactionError, BigInt> getTxPrice(
     BigInt? reward, int byteSize, String? targetAddress,
-    {ArweaveApi? api}) {
+    {required ArweaveApi api}) {
   if (reward != null) {
     return TaskEither.of(reward);
-  }
-  // Require explicit api so callers use their configured gateway instead of
-  // silently defaulting to arweave.net.
-  if (api == null) {
-    return TaskEither.left(GatewayNotConfiguredError());
   }
   final endpoint = targetAddress != null
       ? 'price/$byteSize/$targetAddress'

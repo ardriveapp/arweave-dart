@@ -89,9 +89,9 @@ TransactionTaskEither createTransactionTaskEither({
   BigInt? reward,
   required final DataStreamGenerator dataStreamGenerator,
   required final int dataSize,
-  Arweave? arweave,
+  required Arweave arweave,
 }) {
-  final api = arweave?.api;
+  final api = arweave.api;
   return getTxAnchor(anchor, api: api).flatMap((anchor) =>
       getTxPrice(reward, dataSize, target, api: api).flatMap((reward) =>
           getOwnerTaskEither(wallet).flatMap((owner) =>

@@ -34,12 +34,6 @@ class GetTxAnchorError extends StreamTransactionError {}
 
 class GetTxPriceError extends StreamTransactionError {}
 
-/// Thrown when anchor or price must be fetched from the network but no gateway
-/// [ArweaveApi] was provided. Pass [arweave] into [createTransactionTaskEither]
-/// so tx_anchor and price requests use your configured gateway instead of the
-/// default (arweave.net).
-class GatewayNotConfiguredError extends StreamTransactionError {}
-
 class PostTxHeadersError extends StreamTransactionError {}
 
 class PostTxChunksError extends StreamTransactionError {}

@@ -15,15 +15,11 @@ Future<
       void Function(),
     )> download({
   required String txId,
-  String? gatewayHost = 'arweave.net',
-  Arweave? arweave,
+  required Arweave arweave,
   Function(double progress, int speed)? onProgress,
   bool verifyDownload = true,
 }) async {
-  final baseUri = arweave?.api.gatewayUrl ??
-      (gatewayHost != null && gatewayHost.isNotEmpty
-          ? Uri.parse('https://$gatewayHost')
-          : Uri.parse('https://arweave.net'));
+  final baseUri = arweave.api.gatewayUrl;
   final downloadUrl = '${baseUri.origin}/$txId';
 
   int bytesDownloaded = 0;

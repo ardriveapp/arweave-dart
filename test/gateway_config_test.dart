@@ -102,24 +102,6 @@ void main() {
       );
     }, onPlatform: {'browser': Skip('dart:io only')});
 
-    test('getTxAnchor with null api returns GatewayNotConfiguredError',
-        () async {
-      final result = await getTxAnchor(null, api: null).run();
-      result.fold(
-        (l) => expect(l, isA<GatewayNotConfiguredError>()),
-        (r) => fail('Expected Left(GatewayNotConfiguredError), got Right'),
-      );
-    }, onPlatform: {'browser': Skip('dart:io only')});
-
-    test('getTxPrice with null api returns GatewayNotConfiguredError',
-        () async {
-      final result = await getTxPrice(null, 256, null, api: null).run();
-      result.fold(
-        (l) => expect(l, isA<GatewayNotConfiguredError>()),
-        (r) => fail('Expected Left(GatewayNotConfiguredError), got Right'),
-      );
-    }, onPlatform: {'browser': Skip('dart:io only')});
-
     test('createTransactionTaskEither uses configured arweave gateway',
         () async {
       final requestedPaths = <String>[];

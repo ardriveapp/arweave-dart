@@ -14,10 +14,8 @@ class Arweave {
   late ArweaveChunksApi _chunks;
 
   Arweave({
-    Uri? gatewayUrl,
-    ArweaveApi? api,
-  }) {
-    _api = api ?? ArweaveApi(gatewayUrl: gatewayUrl);
+    required ArweaveApi api,
+  }) : _api = api {
     _transactions = ArweaveTransactionsApi(this.api);
     _chunks = ArweaveChunksApi(this.api);
   }

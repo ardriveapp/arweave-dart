@@ -20,8 +20,10 @@ Future<
   Function(double progress, int speed)? onProgress,
   bool verifyDownload = true,
 }) async {
-  final baseUri =
-      arweave?.api.gatewayUrl ?? Uri.parse('https://$gatewayHost');
+  final baseUri = arweave?.api.gatewayUrl ??
+      (gatewayHost != null && gatewayHost.isNotEmpty
+          ? Uri.parse('https://$gatewayHost')
+          : Uri.parse('https://arweave.net'));
   final downloadUrl = '${baseUri.origin}/$txId';
 
   int bytesDownloaded = 0;

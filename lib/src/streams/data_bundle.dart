@@ -56,7 +56,6 @@ class TransactionResult {
       'data': '', // Empty for format 2 chunked uploads; data is sent via chunks
       'data_root': dataRoot,
       'data_size': dataSize.toString(),
-      'data_tree': [], // Empty for format 2; required by gateway schema
       'reward': reward.toString(),
       'signature': signature,
     };

@@ -5,7 +5,7 @@ import 'package:arweave/arweave.dart';
 
 void main() async {
   // Initialise an Arweave client.
-  final client = Arweave();
+  final client = Arweave(api: ArweaveApi());
 
   // Load an Arweave wallet.
   final wallet = Wallet.fromJwk(json.decode('<wallet jwk>'));

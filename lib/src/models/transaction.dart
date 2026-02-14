@@ -11,6 +11,7 @@ part 'transaction.g.dart';
 
 String _bigIntToString(BigInt v) => v.toString();
 BigInt _stringToBigInt(String v) => BigInt.parse(v);
+String _dataToJson(Uint8List data) => encodeBytesToBase64(data);
 
 @JsonSerializable()
 class Transaction implements TransactionBase {
@@ -46,6 +47,8 @@ class Transaction implements TransactionBase {
   /// The unencoded data associated with this [Transaction].
   ///
   /// This data is persisted unencoded to avoid having to convert it back from Base64 when signing.
+  /// Serialized as base64 string in JSON to match gateway schema.
+  @JsonKey(toJson: _dataToJson)
   @override
   Uint8List get data => _data;
   Uint8List _data;

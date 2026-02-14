@@ -241,30 +241,28 @@ Stream<TransactionChunk> getChunks(Stream<Uint8List> dataStream,
   await chunker.cancel();
 }
 
-TaskEither<StreamTransactionError, String> getTxAnchor(String? anchor) {
+TaskEither<StreamTransactionError, String> getTxAnchor(String? anchor,
+    {required ArweaveApi api}) {
   if (anchor != null) {
     return TaskEither.of(anchor);
   }
-
   return TaskEither.tryCatch(() async {
-    return await ArweaveApi().get('tx_anchor').then((res) => res.body);
+    return await api.get('tx_anchor').then((res) => res.body);
   }, (error, _) => GetTxAnchorError());
 }
 
 TaskEither<StreamTransactionError, BigInt> getTxPrice(
-    BigInt? reward, int byteSize, String? targetAddress) {
+    BigInt? reward, int byteSize, String? targetAddress,
+    {required ArweaveApi api}) {
   if (reward != null) {
     return TaskEither.of(reward);
   }
-
   final endpoint = targetAddress != null
       ? 'price/$byteSize/$targetAddress'
       : 'price/$byteSize';
 
   return TaskEither.tryCatch(() async {
-    return await ArweaveApi()
-        .get(endpoint)
-        .then((res) => BigInt.parse(res.body));
+    return await api.get(endpoint).then((res) => BigInt.parse(res.body));
   }, (error, _) => GetTxPriceError());
 }
 

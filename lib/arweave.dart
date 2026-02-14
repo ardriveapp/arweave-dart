@@ -1,3 +1,4 @@
+export './src/api/api.dart';
 export './src/arweave.dart';
 export './src/models/models.dart';
 export './src/signature_config.dart';

@@ -8,7 +8,7 @@ import 'package:arweave/arweave.dart';
 /// Read more about [DataBundle]s at [ANS-102](https://github.com/ArweaveTeam/arweave-standards/blob/master/ans/ANS-102.md).
 void main() async {
   // Initialise an Arweave client.
-  final client = Arweave();
+  final client = Arweave(api: ArweaveApi());
 
   // Load an Arweave wallet.
   final wallet = Wallet.fromJwk(json.decode('<wallet jwk>'));

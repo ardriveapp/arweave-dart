@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:arweave/arweave.dart';
 import 'package:arweave/utils.dart';
 import 'package:fpdart/fpdart.dart';
 
@@ -52,6 +53,7 @@ class TransactionResult {
       'tags': tags.map((tag) => tag.toJson()).toList(),
       'target': target,
       'quantity': quantity.toString(),
+      'data': '', // Empty for format 2 chunked uploads; data is sent via chunks
       'data_root': dataRoot,
       'data_size': dataSize.toString(),
       'reward': reward.toString(),
@@ -87,9 +89,11 @@ TransactionTaskEither createTransactionTaskEither({
   BigInt? reward,
   required final DataStreamGenerator dataStreamGenerator,
   required final int dataSize,
+  required Arweave arweave,
 }) {
-  return getTxAnchor(anchor).flatMap((anchor) =>
-      getTxPrice(reward, dataSize, target).flatMap((reward) =>
+  final api = arweave.api;
+  return getTxAnchor(anchor, api: api).flatMap((anchor) =>
+      getTxPrice(reward, dataSize, target, api: api).flatMap((reward) =>
           getOwnerTaskEither(wallet).flatMap((owner) =>
               prepareChunksTaskEither(dataStreamGenerator)
                   .flatMap((chunksWithProofs) {

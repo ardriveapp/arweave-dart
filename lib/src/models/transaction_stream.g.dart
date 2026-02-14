@@ -8,7 +8,7 @@ part of 'transaction_stream.dart';
 
 TransactionStream _$TransactionStreamFromJson(Map<String, dynamic> json) =>
     TransactionStream(
-      format: json['format'] as int? ?? 1,
+      format: (json['format'] as num?)?.toInt() ?? 1,
       id: json['id'] as String?,
       lastTx: json['last_tx'] as String?,
       owner: json['owner'] as String?,

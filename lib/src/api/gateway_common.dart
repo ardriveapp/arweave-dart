@@ -1,1 +1,3 @@
-Uri getDefaultGateway() => Uri(scheme: 'https', host: 'arweave.net');
+import '../constants.dart';
+
+Uri getDefaultGateway() => Uri(scheme: 'https', host: defaultGatewayHost);

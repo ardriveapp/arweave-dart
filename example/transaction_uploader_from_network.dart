@@ -12,7 +12,7 @@ import 'package:arweave/arweave.dart';
 /// been uploaded.
 void main() async {
   // Initialise an Arweave client.
-  final client = Arweave();
+  final client = Arweave(api: ArweaveApi());
 
   // Get the transaction from the network.
   final transaction = await (client.transactions.get('<transaction id>') as FutureOr<Transaction>);

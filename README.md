@@ -32,16 +32,16 @@ Once you have the package, you can create an instance of the client with its def
 ```dart
 import 'package:arweave/arweave.dart';
 void main() {
-  var client = Arweave();
+  var client = Arweave(api: ArweaveApi());
 }
 ```
 
-This will create an instance of the client that connects to the `arweave.net` gateway or if you're running on the web, this will detect the origin you're hosting on and use that as the gateway to connect to.
+This will create an instance of the client that connects to the `arweave.net` gateway (or on the web, the origin you're hosting on).
 
-You can optionally choose to provide your own gateway url:
+To use a custom gateway:
 
 ```dart
-Arweave(gatewayUrl: Uri.parse('https://arweave.dev'));
+Arweave(api: ArweaveApi(gatewayUrl: Uri.parse('https://arweave.dev')));
 ```
 
 ## Usage

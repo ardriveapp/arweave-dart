@@ -154,8 +154,9 @@ class TransactionUploader {
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 
-    // Post the transaction with no data.
-    txJson.remove('data');
+    // Post the transaction header only; data is uploaded via chunks. Include empty
+    // data key so the node receives valid JSON (it expects the key to be present).
+    txJson['data'] = '';
     final res = await _api.post('tx', body: json.encode(txJson));
 
     if (!(res.statusCode >= 200 && res.statusCode < 300)) {

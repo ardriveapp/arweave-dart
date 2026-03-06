@@ -25,6 +25,12 @@ const _fatalChunkUploadErrors = [
   'invalid_proof'
 ];
 
+/// Exponential backoff for chunk upload retries (e.g. when nodes return 400
+/// because the tx header is not yet propagated).
+const _chunkRetryDelayFactor = Duration(seconds: 1);
+const _chunkRetryMaxDelay = Duration(seconds: 60);
+const _chunkRetryMaxAttempts = 15;
+
 TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
     uploadTransaction(TransactionResult transaction, [Arweave? arweaveClient]) {
   final arweave = arweaveClient?.api ?? ArweaveApi();
@@ -181,6 +187,9 @@ class ChunkUploader {
           chunk,
           transaction.chunks.dataRoot,
         ),
+        delayFactor: _chunkRetryDelayFactor,
+        maxDelay: _chunkRetryMaxDelay,
+        maxAttempts: _chunkRetryMaxAttempts,
         onRetry: (exception) {
           if (exception is DioException) {
             if (exception.type == DioExceptionType.cancel) {
@@ -230,14 +239,22 @@ class ChunkUploader {
 
     if (res.statusCode != 200) {
       final responseError = getResponseErrorFromDioRespose(res);
+      final bodyString = res.data is String
+          ? res.data as String
+          : json.encode(res.data);
+      final isPropagationRetriable = isChunkPropagationRetriableResponse(
+          res.statusCode ?? 0, bodyString);
 
       if (_fatalChunkUploadErrors.contains(responseError)) {
         throw StateError(
             'Fatal error uploading chunk: $chunkIndex: ${res.statusCode} $responseError');
-      } else {
-        throw Exception(
-            'Received non-fatal error while uploading chunk $chunkIndex: ${res.statusCode} $responseError');
       }
+      if (isPropagationRetriable) {
+        throw Exception(
+            'Chunk $chunkIndex rejected (tx header may not be propagated yet): ${res.statusCode}. Will retry with backoff.');
+      }
+      throw Exception(
+          'Received non-fatal error while uploading chunk $chunkIndex: ${res.statusCode} $responseError');
     }
   }
 

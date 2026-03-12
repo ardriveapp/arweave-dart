@@ -20,8 +20,17 @@ class ArweaveApi {
   Future<http.Response> getSandboxedTx(String txId) =>
       _client.get(_getSandboxedEndpointUri(txId));
 
-  Future<http.Response> post(String endpoint, {dynamic body}) =>
-      _client.post(_getEndpointUri(endpoint), body: body);
+  Future<http.Response> post(String endpoint, {dynamic body}) {
+    final uri = _getEndpointUri(endpoint);
+    if (body == null) {
+      return _client.post(uri);
+    }
+    return _client.post(
+      uri,
+      body: body,
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
 
   Uri _getEndpointUri(String endpoint) =>
       Uri.parse('${gatewayUrl.origin}/$endpoint');

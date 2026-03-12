@@ -49,7 +49,13 @@ TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
   return TaskEither.tryCatch(() async {
     final endpoint = '${arweave.gatewayUrl}/tx';
     final Dio dio = Dio();
-    final res = await dio.post(endpoint, data: json.encode(headers));
+    final res = await dio.post(
+      endpoint,
+      data: json.encode(headers),
+      options: Options(
+        contentType: Headers.jsonContentType,
+      ),
+    );
 
     if (res.statusCode == null) {
       throw Exception('Unable to upload transaction: ${res.statusCode}');
@@ -234,6 +240,9 @@ class ChunkUploader {
     final res = await dio.post(
       endpoint,
       data: json.encode(chunk),
+      options: Options(
+        contentType: Headers.jsonContentType,
+      ),
       cancelToken: _cancelToken,
     );
 

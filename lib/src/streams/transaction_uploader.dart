@@ -54,6 +54,7 @@ TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
       data: json.encode(headers),
       options: Options(
         contentType: Headers.jsonContentType,
+        validateStatus: (_) => true,
       ),
     );
 
@@ -242,6 +243,7 @@ class ChunkUploader {
       data: json.encode(chunk),
       options: Options(
         contentType: Headers.jsonContentType,
+        validateStatus: (_) => true,
       ),
       cancelToken: _cancelToken,
     );

@@ -15,6 +15,8 @@ void main() {
     test('chunked upload sends transaction JSON with data key set to empty string',
         () async {
       String? capturedTxBody;
+      http.Request? capturedTxRequest;
+      http.Request? capturedChunkRequest;
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
           if (request.url.path.endsWith('tx_anchor')) {
@@ -26,10 +28,12 @@ void main() {
         }
         if (request.method == 'POST') {
           if (request.url.path.endsWith('tx')) {
+            capturedTxRequest = request;
             capturedTxBody = request.body;
             return http.Response('', 200);
           }
           if (request.url.path.endsWith('chunk')) {
+            capturedChunkRequest ??= request;
             return http.Response('', 200);
           }
         }
@@ -56,12 +60,21 @@ void main() {
           reason: 'Need multiple chunks to exercise chunked upload path');
 
       final uploader = await client.transactions.getUploader(transaction);
-      final events = uploader.upload().take(1);
-      await for (final _ in events) {
-        break; // Consume first event (after header is posted).
-      }
+      // First event: header posted; second: at least one chunk completed (POST /chunk).
+      await uploader.upload().take(2).toList();
 
       expect(capturedTxBody, isNotNull, reason: 'POST /tx body should be captured');
+      expect(capturedTxRequest, isNotNull);
+      expect(
+          capturedTxRequest!.headers['content-type'],
+          equals('application/json'),
+          reason: 'POST /tx must send Content-Type: application/json');
+      expect(capturedChunkRequest, isNotNull,
+          reason: 'At least one POST /chunk should occur');
+      expect(
+          capturedChunkRequest!.headers['content-type'],
+          equals('application/json'),
+          reason: 'POST /chunk must send Content-Type: application/json');
       final txJson = json.decode(capturedTxBody!) as Map<String, dynamic>;
       expect(txJson, contains('data'), reason: 'Node expects data key in JSON');
       expect(txJson['data'], equals(''),
@@ -71,6 +84,7 @@ void main() {
     test('single-chunk upload sends transaction JSON with data key set to base64 payload',
         () async {
       String? capturedTxBody;
+      http.Request? capturedTxRequest;
       final mockClient = MockClient((request) async {
         if (request.method == 'GET') {
           if (request.url.path.endsWith('tx_anchor')) {
@@ -81,6 +95,7 @@ void main() {
           }
         }
         if (request.method == 'POST' && request.url.path.endsWith('tx')) {
+          capturedTxRequest = request;
           capturedTxBody = request.body;
           return http.Response('', 200);
         }
@@ -108,11 +123,88 @@ void main() {
       await client.transactions.upload(transaction).drain();
 
       expect(capturedTxBody, isNotNull);
+      expect(capturedTxRequest, isNotNull);
+      expect(
+          capturedTxRequest!.headers['content-type'],
+          equals('application/json'),
+          reason: 'POST /tx must send Content-Type: application/json');
       final txJson = json.decode(capturedTxBody!) as Map<String, dynamic>;
       expect(txJson, contains('data'));
       expect(txJson['data'], isA<String>(), reason: 'data must be base64 string');
       expect((txJson['data'] as String).length, greaterThan(0),
           reason: 'Single-chunk upload must send base64 data in body');
+    }, onPlatform: {'browser': Skip('dart:io only')});
+  });
+
+  group('TransactionUploader chunk uploads', () {
+    test('POST /chunk once per chunk with application/json and required fields',
+        () async {
+      final chunkBodies = <String>[];
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET') {
+          if (request.url.path.endsWith('tx_anchor')) {
+            return http.Response('dGVzdC1hbmNob3I', 200);
+          }
+          if (request.url.path.contains('price/')) {
+            return http.Response('1000000', 200);
+          }
+        }
+        if (request.method == 'POST') {
+          if (request.url.path.endsWith('tx')) {
+            return http.Response('', 200);
+          }
+          if (request.url.path.endsWith('chunk')) {
+            expect(
+              request.headers['content-type'],
+              equals('application/json'),
+              reason: 'each chunk POST must use application/json',
+            );
+            chunkBodies.add(request.body);
+            return http.Response('', 200);
+          }
+        }
+        return http.Response('', 404);
+      });
+
+      final api = ArweaveApi(
+        gatewayUrl: Uri.parse('https://arweave.net'),
+        client: mockClient,
+      );
+      final client = Arweave(api: api);
+      final wallet = getTestWallet();
+      final signer = ArweaveSigner(wallet);
+
+      final largeData = generateByteList(1);
+      final transaction = await client.transactions.prepare(
+        Transaction.withBlobData(data: largeData, reward: BigInt.one),
+        wallet,
+      );
+      await transaction.sign(signer);
+
+      final totalChunks = transaction.chunks!.chunks.length;
+      expect(totalChunks, greaterThan(1));
+
+      await client.transactions.upload(transaction).drain();
+
+      expect(
+        chunkBodies.length,
+        equals(totalChunks),
+        reason: 'one POST /chunk per merkle chunk',
+      );
+
+      for (var i = 0; i < chunkBodies.length; i++) {
+        final map = json.decode(chunkBodies[i]) as Map<String, dynamic>;
+        expect(
+          map.keys.toSet(),
+          containsAll(['data_root', 'data_size', 'data_path', 'offset', 'chunk']),
+          reason: 'chunk $i must include gateway chunk schema fields',
+        );
+        expect(map['data_root'], equals(transaction.dataRoot));
+        expect((map['chunk'] as String).isNotEmpty, isTrue);
+        expect((map['data_path'] as String).isNotEmpty, isTrue);
+        expect(map['offset'], isA<String>());
+        expect(map['data_size'], isA<String>());
+      }
     }, onPlatform: {'browser': Skip('dart:io only')});
   });
 }

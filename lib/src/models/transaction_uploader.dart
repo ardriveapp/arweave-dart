@@ -13,6 +13,12 @@ import '../utils.dart';
 /// Maximum amount of chunks we will upload in the body.
 const maxChunksInBody = 1;
 
+/// Exponential backoff for chunk upload retries (e.g. when nodes return 400
+/// because the tx header is not yet propagated).
+const _chunkRetryDelayFactor = Duration(seconds: 1);
+const _chunkRetryMaxDelay = Duration(seconds: 60);
+const _chunkRetryMaxAttempts = 15;
+
 /// Errors from /chunk we should never try and continue on.
 const fatalChunkUploadErrors = [
   'invalid_json',
@@ -78,6 +84,9 @@ class TransactionUploader {
       try {
         await retry(
           () => _uploadChunk(chunkIndex, chunk),
+          delayFactor: _chunkRetryDelayFactor,
+          maxDelay: _chunkRetryMaxDelay,
+          maxAttempts: _chunkRetryMaxAttempts,
           onRetry: (exception) {
             print(
               'Retrying for chunk $chunkIndex on exception ${exception.toString()}',
@@ -154,8 +163,9 @@ class TransactionUploader {
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 
-    // Post the transaction with no data.
-    txJson.remove('data');
+    // Post the transaction header only; data is uploaded via chunks. Include empty
+    // data key so the node receives valid JSON (it expects the key to be present).
+    txJson['data'] = '';
     final res = await _api.post('tx', body: json.encode(txJson));
 
     if (!(res.statusCode >= 200 && res.statusCode < 300)) {
@@ -185,14 +195,19 @@ class TransactionUploader {
 
     if (res.statusCode != 200) {
       final responseError = getResponseError(res);
+      final isPropagationRetriable = isChunkPropagationRetriableResponse(
+          res.statusCode, res.body);
 
       if (fatalChunkUploadErrors.contains(responseError)) {
         throw StateError(
             'Fatal error uploading chunk: $chunkIndex: ${res.statusCode} $responseError');
-      } else {
-        throw Exception(
-            'Received non-fatal error while uploading chunk $chunkIndex: ${res.statusCode} $responseError');
       }
+      if (isPropagationRetriable) {
+        throw Exception(
+            'Chunk $chunkIndex rejected (tx header may not be propagated yet): ${res.statusCode}. Will retry with backoff.');
+      }
+      throw Exception(
+          'Received non-fatal error while uploading chunk $chunkIndex: ${res.statusCode} $responseError');
     }
   }
 }

@@ -96,6 +96,22 @@ String winstonToAr(BigInt winston) {
   return bit;
 }
 
+/// True when the response is a 400 with multi-peer results (e.g. tx header not
+/// yet propagated). These should be retried with backoff.
+bool isChunkPropagationRetriableResponse(int statusCode, String body) {
+  if (statusCode != 400) return false;
+  try {
+    final map = json.decode(body) as Map<String, dynamic>;
+    final results = map['results'];
+    if (results is! List || results.isEmpty) return false;
+    final successCount = map['successCount'];
+    if (successCount is int && successCount > 0) return false;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Safely get the error from an Arweave HTTP response.
 String getResponseError(http.Response res) {
   if (res.headers['Content-Type'] == 'application/json') {

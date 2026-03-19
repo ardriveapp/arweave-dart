@@ -10,6 +10,11 @@ import 'package:test/test.dart';
 import 'fixtures/test_wallet.dart';
 import 'utils.dart' show generateByteList;
 
+/// Chunk POSTs may send `application/json` or e.g. `application/json; charset=utf-8`.
+bool _contentTypeStartsWithApplicationJson(String? header) =>
+    header != null &&
+    header.toLowerCase().trim().startsWith('application/json');
+
 void main() {
   group('TransactionUploader POST /tx body', () {
     test('chunked upload sends transaction JSON with data key set to empty string',
@@ -72,9 +77,11 @@ void main() {
       expect(capturedChunkRequest, isNotNull,
           reason: 'At least one POST /chunk should occur');
       expect(
-          capturedChunkRequest!.headers['content-type'],
-          equals('application/json'),
-          reason: 'POST /chunk must send Content-Type: application/json');
+          _contentTypeStartsWithApplicationJson(
+              capturedChunkRequest!.headers['content-type']),
+          isTrue,
+          reason:
+              'POST /chunk must send Content-Type starting with application/json');
       final txJson = json.decode(capturedTxBody!) as Map<String, dynamic>;
       expect(txJson, contains('data'), reason: 'Node expects data key in JSON');
       expect(txJson['data'], equals(''),
@@ -155,9 +162,11 @@ void main() {
           }
           if (request.url.path.endsWith('chunk')) {
             expect(
-              request.headers['content-type'],
-              equals('application/json'),
-              reason: 'each chunk POST must use application/json',
+              _contentTypeStartsWithApplicationJson(
+                  request.headers['content-type']),
+              isTrue,
+              reason:
+                  'each chunk POST must use Content-Type starting with application/json',
             );
             chunkBodies.add(request.body);
             return http.Response('', 200);

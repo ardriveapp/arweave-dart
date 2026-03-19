@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 import 'fixtures/test_wallet.dart';
 import 'utils.dart' show generateByteList;
 
-/// Chunk POSTs may send `application/json` or e.g. `application/json; charset=utf-8`.
+/// POST /tx and POST /chunk may send `application/json` or e.g. `application/json; charset=utf-8`.
 bool _contentTypeStartsWithApplicationJson(String? header) =>
     header != null &&
     header.toLowerCase().trim().startsWith('application/json');
@@ -71,9 +71,11 @@ void main() {
       expect(capturedTxBody, isNotNull, reason: 'POST /tx body should be captured');
       expect(capturedTxRequest, isNotNull);
       expect(
-          capturedTxRequest!.headers['content-type'],
-          equals('application/json'),
-          reason: 'POST /tx must send Content-Type: application/json');
+          _contentTypeStartsWithApplicationJson(
+              capturedTxRequest!.headers['content-type']),
+          isTrue,
+          reason:
+              'POST /tx must send Content-Type starting with application/json');
       expect(capturedChunkRequest, isNotNull,
           reason: 'At least one POST /chunk should occur');
       expect(
@@ -132,9 +134,11 @@ void main() {
       expect(capturedTxBody, isNotNull);
       expect(capturedTxRequest, isNotNull);
       expect(
-          capturedTxRequest!.headers['content-type'],
-          equals('application/json'),
-          reason: 'POST /tx must send Content-Type: application/json');
+          _contentTypeStartsWithApplicationJson(
+              capturedTxRequest!.headers['content-type']),
+          isTrue,
+          reason:
+              'POST /tx must send Content-Type starting with application/json');
       final txJson = json.decode(capturedTxBody!) as Map<String, dynamic>;
       expect(txJson, contains('data'));
       expect(txJson['data'], isA<String>(), reason: 'data must be base64 string');

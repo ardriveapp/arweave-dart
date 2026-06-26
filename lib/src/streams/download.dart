@@ -215,16 +215,21 @@ class TransactionData {
   }
 
   void parseData(Map<String, dynamic> jsonData) {
-    anchor = jsonData['anchor'];
+    // `anchor`, `recipient` and `signature` are optional in the GraphQL
+    // schema and gateways return `null` (not `''`) when they are absent.
+    // Coalesce to empty strings so parsing doesn't crash on these
+    // non-nullable fields — on web an unguarded null assignment throws
+    // `type 'JSNull' is not a subtype of type 'String'`.
+    anchor = jsonData['anchor'] ?? '';
     owner = jsonData['owner']['key'];
-    target = jsonData['recipient'];
-    signature = jsonData['signature'];
+    target = jsonData['recipient'] ?? '';
+    signature = jsonData['signature'] ?? '';
     dataSize = int.parse(jsonData['data']['size']);
     isDataItem = jsonData['bundledIn'] != null;
     quantity = int.parse(jsonData['quantity']['winston']);
     reward = int.parse(jsonData['fee']['winston']);
 
-    var downloadedTags = jsonData['tags'];
+    var downloadedTags = jsonData['tags'] ?? [];
     tags = [];
     for (var tag in downloadedTags) {
       tags.add(createTag(tag['name'], tag['value']));

@@ -82,10 +82,14 @@ void main() {
     late HttpServer server;
     late List<int> chunkStatuses;
     late int headerPosts;
+    late int headerStatus;
+    late String headerBody;
 
     setUp(() async {
       chunkStatuses = [];
       headerPosts = 0;
+      headerStatus = 200;
+      headerBody = 'OK';
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     });
 
@@ -104,7 +108,8 @@ void main() {
           response.write('1000000');
         } else if (path == '/tx') {
           headerPosts++;
-          response.write('OK');
+          response.statusCode = headerStatus;
+          response.write(headerBody);
         } else if (path == '/chunk') {
           final status = chunkStatuses.length < chunkAnswers.length
               ? chunkAnswers[chunkStatuses.length]
@@ -151,6 +156,47 @@ void main() {
       expect(headerPosts, 1);
       expect(chunkStatuses, [400, 200]);
       expect(events.last, (1, 1));
+    });
+
+    for (final (status, body, state) in [
+      (208, 'Transaction already processed.', 'pending'),
+      (400, 'Transaction is already on the weave.', 'mined'),
+    ]) {
+      test('posts the chunks of a transaction whose header is already $state',
+          () async {
+        serve([]);
+        headerStatus = status;
+        headerBody = body;
+        final arweave = Arweave(
+          api: ArweaveApi(
+            gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+          ),
+        );
+        final transaction = await singleChunkTransaction(arweave);
+
+        final started = await uploadTransaction(transaction, arweave).run();
+        final (progress, _) = started.getOrElse((error) => throw error);
+        await progress.toList();
+
+        expect(chunkStatuses, [200]);
+      });
+    }
+
+    test('fails when the header is refused for another reason', () async {
+      serve([]);
+      headerStatus = 400;
+      headerBody = 'Invalid anchor.';
+      final arweave = Arweave(
+        api: ArweaveApi(
+          gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        ),
+      );
+      final transaction = await singleChunkTransaction(arweave);
+
+      final started = await uploadTransaction(transaction, arweave).run();
+
+      expect(started.isLeft(), isTrue);
+      expect(chunkStatuses, isEmpty);
     });
 
     test('uploadTransactionChunks posts the chunks and not the header',

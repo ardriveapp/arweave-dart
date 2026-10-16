@@ -76,7 +76,14 @@ TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 
-    if (!(res.statusCode! >= 200 && res.statusCode! < 300)) {
+    // A header the network already has counts as posted, so its chunks are
+    // still sent: a node answers 208 while it is pending, and 400 "Transaction
+    // is already on the weave." once it is mined.
+    final isAlreadyOnWeave = res.statusCode == 400 &&
+        '${res.data}'.contains('already on the weave');
+
+    if (!(res.statusCode! >= 200 && res.statusCode! < 300) &&
+        !isAlreadyOnWeave) {
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 

@@ -44,9 +44,11 @@ TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
 
 /// Uploads [transaction]'s chunks without posting its header.
 ///
-/// For a transaction the network already has, pending or mined: posting its
-/// header again is refused once it is mined ("Transaction is already on the
-/// weave"), but its chunks can still be posted.
+/// For a transaction the network already has, pending or mined. Posting its
+/// header again counts as posted only while a node still recognises it (see
+/// [uploadTransaction]); once it is about 50 blocks deep its anchor has
+/// expired and the header is refused as invalid, but its chunks can still be
+/// posted.
 TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
     uploadTransactionChunks(TransactionResult transaction,
         [Arweave? arweaveClient]) {
@@ -77,13 +79,17 @@ TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(
     }
 
     // A header the network already has counts as posted, so its chunks are
-    // still sent: a node answers 208 while it is pending, and 400 "Transaction
-    // is already on the weave." once it is mined.
-    final isAlreadyOnWeave = res.statusCode == 400 &&
-        '${res.data}'.contains('already on the weave');
+    // still sent. A node answers 208 "Transaction already processed." for ten
+    // minutes after it first saw it, then 400 "Transaction is already in the
+    // mempool." while it is pending, and 400 "Transaction is already on the
+    // weave." once it is mined, for as long as its anchor is recent (about 50
+    // blocks).
+    final body = '${res.data}';
+    final isAlreadyKnown = res.statusCode == 400 &&
+        (body.contains('already in the mempool') ||
+            body.contains('already on the weave'));
 
-    if (!(res.statusCode! >= 200 && res.statusCode! < 300) &&
-        !isAlreadyOnWeave) {
+    if (!(res.statusCode! >= 200 && res.statusCode! < 300) && !isAlreadyKnown) {
       throw Exception('Unable to upload transaction: ${res.statusCode}');
     }
 
@@ -113,17 +119,22 @@ Stream<(int, int)> _postChunks(
   int uploadedChunks = 0;
   isComplete() => uploadedChunks >= totalChunks;
 
+  // The first chunk goes alone, and the rest fan out once it is accepted.
+  // Until the header has reached the nodes every chunk is rejected and
+  // retried, so sending them all at once would retry each of them against the
+  // gateway, which posts each one to several peers, for nothing.
+  bool fannedOut = false;
+
   final mutex = Mutex();
 
-  // Initiate as many chunk uploads as we can in parallel at the start.
+  // Initiate the first chunk upload.
   // Note that onListen is not actually awaited, so should be protected by Mutex
   // to ensure that additional chunk uploads are not started before these.
   chunkUploadCompletionStreamController.onListen = () async {
     await mutex.protect(() async {
-      while (chunkIndex < totalChunks &&
-          chunkIndex < maxConcurrentChunkUploadCount) {
-        final chunkUploader =
-            ChunkUploader(transaction, chunkUploadCompletionStreamController, arweave);
+      while (chunkIndex < totalChunks && chunkIndex < 1) {
+        final chunkUploader = ChunkUploader(
+            transaction, chunkUploadCompletionStreamController, arweave);
 
         aborter.addChunk(chunkUploader);
 
@@ -147,16 +158,23 @@ Stream<(int, int)> _postChunks(
     // Note that the future is not awaited, so it will be queued after returning
     mutex.protect(() async {
       if (chunkIndex < totalChunks) {
-        final chunkUploader =
-            ChunkUploader(transaction, chunkUploadCompletionStreamController, arweave);
-        aborter.addChunk(chunkUploader);
+        // One upload replaces each that completes, except the first, which
+        // opens the full width.
+        final toStart = fannedOut ? 1 : maxConcurrentChunkUploadCount;
+        fannedOut = true;
+        for (var i = 0; i < toStart && chunkIndex < totalChunks; i++) {
+          final chunkUploader = ChunkUploader(
+              transaction, chunkUploadCompletionStreamController, arweave);
+          aborter.addChunk(chunkUploader);
 
-        chunkUploader
-            .uploadChunkAndNotifyOfCompletion(chunkIndex, await chunkQueue.next)
-            .then((value) {
-          aborter.removeChunk(chunkUploader);
-        });
-        chunkIndex++;
+          chunkUploader
+              .uploadChunkAndNotifyOfCompletion(
+                  chunkIndex, await chunkQueue.next)
+              .then((value) {
+            aborter.removeChunk(chunkUploader);
+          });
+          chunkIndex++;
+        }
       } else if (isComplete()) {
         if (await chunkQueue.hasNext) {
           throw StateError('Chunks remaining in queue');

@@ -81,12 +81,14 @@ void main() {
   group('uploadTransaction', () {
     late HttpServer server;
     late List<int> chunkStatuses;
+    late List<String> chunkOffsets;
     late int headerPosts;
     late int headerStatus;
     late String headerBody;
 
     setUp(() async {
       chunkStatuses = [];
+      chunkOffsets = [];
       headerPosts = 0;
       headerStatus = 200;
       headerBody = 'OK';
@@ -101,7 +103,7 @@ void main() {
       server.listen((request) async {
         final path = request.uri.path;
         final response = request.response;
-        await request.drain<void>();
+        final body = await utf8.decodeStream(request);
         if (path == '/tx_anchor') {
           response.write('dGVzdC1hbmNob3I');
         } else if (path.startsWith('/price/')) {
@@ -115,6 +117,7 @@ void main() {
               ? chunkAnswers[chunkStatuses.length]
               : 200;
           chunkStatuses.add(status);
+          chunkOffsets.add(json.decode(body)['offset'] as String);
           response.statusCode = status;
           if (status != 200) {
             response.headers.contentType = ContentType.json;
@@ -127,8 +130,9 @@ void main() {
       });
     }
 
-    Future<TransactionResult> singleChunkTransaction(Arweave arweave) async {
-      final data = Uint8List.fromList(List.generate(10 * 1024, (i) => i % 256));
+    Future<TransactionResult> signedTransaction(Arweave arweave,
+        {int size = 10 * 1024}) async {
+      final data = Uint8List.fromList(List.generate(size, (i) => i % 256));
       final result = await createTransactionTaskEither(
         wallet: getTestWallet(),
         dataStreamGenerator: () => Stream.value(data),
@@ -147,7 +151,7 @@ void main() {
           gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
         ),
       );
-      final transaction = await singleChunkTransaction(arweave);
+      final transaction = await signedTransaction(arweave);
 
       final started = await uploadTransaction(transaction, arweave).run();
       final (progress, _) = started.getOrElse((error) => throw error);
@@ -160,6 +164,7 @@ void main() {
 
     for (final (status, body, state) in [
       (208, 'Transaction already processed.', 'pending'),
+      (400, 'Transaction is already in the mempool.', 'pending'),
       (400, 'Transaction is already on the weave.', 'mined'),
     ]) {
       test('posts the chunks of a transaction whose header is already $state',
@@ -172,7 +177,7 @@ void main() {
             gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
           ),
         );
-        final transaction = await singleChunkTransaction(arweave);
+        final transaction = await signedTransaction(arweave);
 
         final started = await uploadTransaction(transaction, arweave).run();
         final (progress, _) = started.getOrElse((error) => throw error);
@@ -181,6 +186,28 @@ void main() {
         expect(chunkStatuses, [200]);
       });
     }
+
+    test('sends the other chunks only once the first is accepted', () async {
+      serve([400, 400]);
+      final arweave = Arweave(
+        api: ArweaveApi(
+          gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        ),
+      );
+      // Three chunks.
+      final transaction = await signedTransaction(arweave, size: 600 * 1024);
+      expect(transaction.chunks.chunks.length, 3);
+
+      final started = await uploadTransaction(transaction, arweave).run();
+      final (progress, _) = started.getOrElse((error) => throw error);
+      final events = await progress.toList();
+
+      expect(chunkStatuses, [400, 400, 200, 200, 200]);
+      // The two rejections and the acceptance are all the first chunk.
+      expect(chunkOffsets.take(3).toSet(), hasLength(1));
+      expect(chunkOffsets.toSet(), hasLength(3));
+      expect(events.last, (3, 3));
+    });
 
     test('fails when the header is refused for another reason', () async {
       serve([]);
@@ -191,7 +218,7 @@ void main() {
           gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
         ),
       );
-      final transaction = await singleChunkTransaction(arweave);
+      final transaction = await signedTransaction(arweave);
 
       final started = await uploadTransaction(transaction, arweave).run();
 
@@ -207,7 +234,7 @@ void main() {
           gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
         ),
       );
-      final transaction = await singleChunkTransaction(arweave);
+      final transaction = await signedTransaction(arweave);
 
       final started = await uploadTransactionChunks(transaction, arweave).run();
       final (progress, _) = started.getOrElse((error) => throw error);

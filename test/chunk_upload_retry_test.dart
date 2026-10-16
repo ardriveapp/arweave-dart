@@ -81,9 +81,11 @@ void main() {
   group('uploadTransaction', () {
     late HttpServer server;
     late List<int> chunkStatuses;
+    late int headerPosts;
 
     setUp(() async {
       chunkStatuses = [];
+      headerPosts = 0;
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     });
 
@@ -101,6 +103,7 @@ void main() {
         } else if (path.startsWith('/price/')) {
           response.write('1000000');
         } else if (path == '/tx') {
+          headerPosts++;
           response.write('OK');
         } else if (path == '/chunk') {
           final status = chunkStatuses.length < chunkAnswers.length
@@ -145,7 +148,27 @@ void main() {
       final (progress, _) = started.getOrElse((error) => throw error);
       final events = await progress.toList();
 
+      expect(headerPosts, 1);
       expect(chunkStatuses, [400, 200]);
+      expect(events.last, (1, 1));
+    });
+
+    test('uploadTransactionChunks posts the chunks and not the header',
+        () async {
+      serve([]);
+      final arweave = Arweave(
+        api: ArweaveApi(
+          gatewayUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        ),
+      );
+      final transaction = await singleChunkTransaction(arweave);
+
+      final started = await uploadTransactionChunks(transaction, arweave).run();
+      final (progress, _) = started.getOrElse((error) => throw error);
+      final events = await progress.toList();
+
+      expect(headerPosts, 0);
+      expect(chunkStatuses, [200]);
       expect(events.last, (1, 1));
     });
   });

@@ -42,6 +42,20 @@ TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
   });
 }
 
+/// Uploads [transaction]'s chunks without posting its header.
+///
+/// For a transaction the network already has, pending or mined: posting its
+/// header again is refused once it is mined ("Transaction is already on the
+/// weave"), but its chunks can still be posted.
+TaskEither<StreamTransactionError, (Stream<(int, int)>, UploadAborter)>
+    uploadTransactionChunks(TransactionResult transaction,
+        [Arweave? arweaveClient]) {
+  final arweave = arweaveClient?.api ?? ArweaveApi();
+  final aborter = UploadAborter();
+
+  return TaskEither.of((_postChunks(arweave, transaction, aborter), aborter));
+}
+
 // TODO: Add Dio to the ArweaveAPI class and use that instead of creating a new
 // instance here.
 TaskEither<StreamTransactionError, Response> _postTransactionHeaderTaskEither(

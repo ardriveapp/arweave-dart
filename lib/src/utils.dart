@@ -127,18 +127,38 @@ String getResponseError(http.Response res) {
   return res.body;
 }
 
+/// The error a node or gateway gave in a Dio response, as a string.
+///
+/// Never throws: the chunk uploader calls it to decide whether to retry, and
+/// a throw here escapes the retry entirely, failing the upload after its
+/// header was already posted. Dio has usually decoded a JSON body into a Map
+/// already, so [Response.data] may be a Map, a List, a String or null. An
+/// Arweave node answers `{"error": "data_root_not_found"}`, the legacy shape
+/// is `{"data": {"error": ...}}`, and an AR.IO gateway answers with its
+/// broadcast result, which has no error string and is returned whole.
 String getResponseErrorFromDioRespose(Response res) {
-  if (res.headers['Content-Type'] == 'application/json') {
-    Map<String, dynamic> errJson = json.decode(res.data);
-
-    if (errJson['data'] != null) {
-      return errJson['data'] is Map
-          ? errJson['data']['error']
-          : errJson['data'];
+  try {
+    var data = res.data;
+    if (data is String) {
+      try {
+        data = json.decode(data);
+      } catch (_) {
+        return data as String;
+      }
     }
+    if (data is Map) {
+      final error = data['error'];
+      if (error is String) return error;
+      final nested = data['data'];
+      if (nested is Map && nested['error'] is String) {
+        return nested['error'] as String;
+      }
+      if (nested is String) return nested;
+    }
+    return data == null ? '' : json.encode(data);
+  } catch (_) {
+    return '${res.data}';
   }
-
-  return res.data;
 }
 
 Future<String> ownerToAddress(String owner) async => encodeBytesToBase64(
